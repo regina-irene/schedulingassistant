@@ -720,7 +720,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com '; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
@@ -851,25 +851,51 @@ function handleToken(resp) {
 }
 
 async function fetchCalendars() {
-  const r = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
-    headers: { Authorization: 'Bearer ' + gToken }
-  });
-  const data = await r.json();
-  if (!data.items) { toast('Could not fetch calendars.', 'error'); return; }
+  try {
+    const r = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
+      headers: { Authorization: 'Bearer ' + gToken }
+    });
+    const data = await r.json();
+    console.log('Calendar API response:', data);
 
-  // Load saved settings
-  const saved = JSON.parse(localStorage.getItem('sched_cals') || '{}');
+    if (data.error) {
+      toast('Calendar API error: ' + data.error.message, 'error');
+      console.error('Calendar API error:', data.error);
+      // If unauthorized, clear saved token and prompt reconnect
+      if (data.error.code === 401) {
+        localStorage.removeItem('sched_gtoken');
+        localStorage.removeItem('sched_gtoken_expiry');
+        gToken = null;
+        document.getElementById('gcal-status').textContent = 'Session expired — please reconnect.';
+        document.getElementById('gcal-status').style.color = 'var(--accent)';
+        document.getElementById('connect-btn').textContent = '📅 Connect Google Calendar';
+      }
+      return;
+    }
 
-  calendars = data.items.map(c => ({
-    id: c.id,
-    name: c.summary,
-    color: c.backgroundColor || '#4a90e2',
-    selected: saved[c.id]?.selected !== undefined ? saved[c.id].selected : true,
-    isRiePrivate: saved[c.id]?.isRiePrivate || false,
-  }));
+    if (!data.items || !data.items.length) {
+      toast('No calendars found on this account.', 'error');
+      return;
+    }
 
-  saveCalSettings();
-  renderCalendarList();
+    // Load saved settings
+    const saved = JSON.parse(localStorage.getItem('sched_cals') || '{}');
+
+    calendars = data.items.map(c => ({
+      id: c.id,
+      name: c.summary,
+      color: c.backgroundColor || '#4a90e2',
+      selected: saved[c.id]?.selected !== undefined ? saved[c.id].selected : true,
+      isRiePrivate: saved[c.id]?.isRiePrivate || false,
+    }));
+
+    saveCalSettings();
+    renderCalendarList();
+    toast('Loaded ' + calendars.length + ' calendar(s)!', 'success');
+  } catch(e) {
+    console.error('fetchCalendars exception:', e);
+    toast('Failed to load calendars: ' + e.message, 'error');
+  }
 }
 
 function saveCalSettings() {
