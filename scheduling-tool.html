@@ -1338,7 +1338,10 @@
           🗓 Confirmed Appointments
           <span class="confirmed-count" id="confirmed-count">0</span>
         </div>
-        <button class="btn-archive" onclick="archiveAllConfirmed()" title="Archive all confirmed appointments">Archive All</button>
+        <div style="display:flex;gap:0.5rem">
+          <button class="btn-archive" onclick="openEmailAllModal()" style="background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.5)">✉️ Email All</button>
+          <button class="btn-archive" onclick="archiveAllConfirmed()">Archive All</button>
+        </div>
       </div>
       <div class="confirmed-list" id="confirmed-list">
         <div class="confirmed-empty">No confirmed appointments yet — approve and confirm a time slot to see it here.</div>
@@ -1400,7 +1403,7 @@
 <div class="email-modal-overlay" id="email-modal-overlay">
   <div class="email-modal">
     <div class="email-modal-header">
-      <h2>✉️ Email-Ready Format</h2>
+      <h2 id="email-modal-title">✉️ Email-Ready Format</h2>
       <button class="email-close" onclick="closeEmailModal()">✕</button>
     </div>
     <div class="email-modal-body">
@@ -1436,7 +1439,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
@@ -2015,11 +2018,31 @@ function archiveAllConfirmed() {
 let emailTaskId = null;
 let emailSlotIdx = null;
 let emailTab = 'formal';
+let emailMode = 'single';
 
 function openEmailModal(taskId, si) {
+  emailMode = 'single';
   emailTaskId = taskId;
   emailSlotIdx = si;
   emailTab = 'formal';
+  document.getElementById('email-modal-title').textContent = '\u2709\ufe0f Email-Ready Format';
+  document.querySelectorAll('.email-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('.email-tab').classList.add('active');
+  renderEmailPreview();
+  document.getElementById('email-modal-overlay').classList.add('open');
+}
+
+function openEmailAllModal() {
+  const confirmed = [];
+  for (const task of tasks) {
+    for (const slot of task.slots) {
+      if (slot.confirmed && !slot.archived) confirmed.push({ task, slot });
+    }
+  }
+  if (!confirmed.length) { toast('No confirmed appointments to email.', 'error'); return; }
+  emailMode = 'all';
+  emailTab = 'formal';
+  document.getElementById('email-modal-title').textContent = '\u2709\ufe0f Email All Confirmed Appointments';
   document.querySelectorAll('.email-tab').forEach(t => t.classList.remove('active'));
   document.querySelector('.email-tab').classList.add('active');
   renderEmailPreview();
@@ -2039,6 +2062,8 @@ function switchEmailTab(tab) {
 }
 
 function renderEmailPreview() {
+  if (emailMode === 'all') { renderEmailPreviewAll(); return; }
+
   const task = tasks.find(t => t.id === emailTaskId);
   if (!task) return;
   const slot = task.slots[emailSlotIdx];
@@ -2050,10 +2075,9 @@ function renderEmailPreview() {
   const dur = task.duration ? ' (' + task.duration + ')' : '';
 
   let subject, body;
-
   if (emailTab === 'formal') {
     subject = 'Confirmed: ' + task.title + ' \u2014 ' + dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    body = 'Hello,' + '\n\n' + 'I am writing to confirm the following appointment:' + '\n\n'
+    body = 'Hello,\n\nI am writing to confirm the following appointment:\n\n'
       + '    Event:    ' + task.title + '\n'
       + '    Date:     ' + fullDate + '\n'
       + '    Time:     ' + timeStr + dur + '\n'
@@ -2061,25 +2085,77 @@ function renderEmailPreview() {
       + '\nPlease let me know if you have any questions or need to make any changes.\n\nThank you,\nRegina';
   } else if (emailTab === 'casual') {
     subject = task.title + ' \u2014 ' + dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    body = 'Hi,' + '\n\n' + 'Just confirming our ' + task.title.toLowerCase() + ' for:' + '\n\n'
-      + fullDate + '\n'
-      + timeStr + dur + '\n'
+    body = 'Hi,\n\nJust confirming our ' + task.title.toLowerCase() + ' for:\n\n'
+      + fullDate + ' at ' + timeStr + dur + '\n'
       + (task.desc ? '\n' + task.desc + '\n' : '')
       + '\nLooking forward to it! Let me know if anything changes.\n\nRegina';
   } else {
-    subject = 'Confirmed: ' + task.title + ' — ' + fullDate;
+    subject = 'Confirmed: ' + task.title + ' \u2014 ' + fullDate;
     body = task.title + '\n' + fullDate + ' at ' + timeStr + dur;
   }
 
-  const displayBody = body;
-  const displaySubject = subject;
+  document.getElementById('email-subject').textContent = subject;
+  document.getElementById('email-preview').textContent = body;
+  document.getElementById('email-modal-overlay').dataset.subject = subject;
+  document.getElementById('email-modal-overlay').dataset.body = body;
+}
 
-  document.getElementById('email-subject').textContent = displaySubject;
-  document.getElementById('email-preview').textContent = displayBody;
+function renderEmailPreviewAll() {
+  const confirmed = [];
+  for (const task of tasks) {
+    for (const slot of task.slots) {
+      if (slot.confirmed && !slot.archived) confirmed.push({ task, slot });
+    }
+  }
+  confirmed.sort((a, b) => new Date(a.slot.datetime) - new Date(b.slot.datetime));
+  if (!confirmed.length) return;
 
-  // Store for copy/mailto
-  document.getElementById('email-modal-overlay').dataset.subject = displaySubject;
-  document.getElementById('email-modal-overlay').dataset.body = displayBody;
+  const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  let subject, body;
+
+  if (emailTab === 'formal') {
+    subject = 'Confirmed Appointments Summary \u2014 ' + today;
+    body = 'Hello,\n\nPlease find below a summary of all confirmed appointments:\n\n' + '\u2500'.repeat(40) + '\n';
+    confirmed.forEach(function(item, i) {
+      const dt = new Date(item.slot.datetime);
+      const fullDate = dt.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+      const timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      const dur = item.task.duration ? ' (' + item.task.duration + ')' : '';
+      body += '\n' + (i + 1) + '. ' + item.task.title + '\n'
+        + '   Date:  ' + fullDate + '\n'
+        + '   Time:  ' + timeStr + dur + '\n'
+        + (item.task.desc ? '   Notes: ' + item.task.desc + '\n' : '');
+    });
+    body += '\n' + '\u2500'.repeat(40) + '\n\nPlease let me know if you have any questions or need to reschedule.\n\nThank you,\nRegina';
+
+  } else if (emailTab === 'casual') {
+    subject = 'Our Upcoming Appointments';
+    body = 'Hi,\n\nHere\'s a quick look at everything we have confirmed:\n\n';
+    confirmed.forEach(function(item) {
+      const dt = new Date(item.slot.datetime);
+      const fullDate = dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      const timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      const dur = item.task.duration ? ' (' + item.task.duration + ')' : '';
+      body += '\ud83d\udcc5  ' + item.task.title + ' \u2014 ' + fullDate + ' at ' + timeStr + dur + '\n';
+    });
+    body += '\nLet me know if anything needs to change!\n\nRegina';
+
+  } else {
+    subject = 'Confirmed Appointments';
+    body = 'Confirmed appointments:\n\n';
+    confirmed.forEach(function(item) {
+      const dt = new Date(item.slot.datetime);
+      const fullDate = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      const dur = item.task.duration ? ' (' + item.task.duration + ')' : '';
+      body += item.task.title + ' \u2014 ' + fullDate + ' at ' + timeStr + dur + '\n';
+    });
+  }
+
+  document.getElementById('email-subject').textContent = subject;
+  document.getElementById('email-preview').textContent = body;
+  document.getElementById('email-modal-overlay').dataset.subject = subject;
+  document.getElementById('email-modal-overlay').dataset.body = body;
 }
 
 function copyEmailText() {
