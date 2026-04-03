@@ -1542,7 +1542,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
@@ -2356,8 +2356,10 @@ function setTaskType(type) {
   document.getElementById('type-btn-find').classList.toggle('active', type === 'find');
   document.getElementById('type-btn-check').classList.toggle('active', type === 'check');
   // Show summary and advance to step 2
-  const dur = selectedApptDuration ? ' — ' + selectedApptDuration : '';
-  const summary = '✓ ' + selectedApptTitle + dur;
+  const customTitle = document.getElementById('new-title-custom') ? document.getElementById('new-title-custom').value.trim() : '';
+  const displayTitle = selectedApptTitle + (customTitle && selectedApptTitle !== customTitle ? ' — ' + customTitle : '');
+  const dur = selectedApptDuration ? ' (' + selectedApptDuration + ')' : '';
+  const summary = '✓ ' + displayTitle + dur;
   const step2a = document.getElementById('step2a-summary');
   const step2b = document.getElementById('step2b-summary');
   if (step2a) step2a.textContent = summary;
@@ -2372,14 +2374,7 @@ function setTaskType(type) {
   goToStep(2);
 }
 
-function setTaskType(type) {
-  currentTaskType = type;
-  document.getElementById('type-btn-find').classList.toggle('active', type === 'find');
-  document.getElementById('type-btn-check').classList.toggle('active', type === 'check');
-  document.getElementById('branch-find').classList.toggle('active', type === 'find');
-  document.getElementById('branch-check').classList.toggle('active', type === 'check');
-  document.getElementById('add-task-btn').textContent = type === 'check' ? '+ Add & Check Availability' : '+ Add Task';
-}
+// (duplicate setTaskType removed)
 
 function addProposedEntry() {
   const container = document.getElementById('proposed-slots-container');
