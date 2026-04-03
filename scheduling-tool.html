@@ -272,9 +272,10 @@
 
   .slot-row {
     display: flex;
-    align-items: center;
-    gap: 0.8rem;
-    padding: 8px 10px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    padding: 10px 12px;
     border-radius: 8px;
     border: 1px solid var(--rule);
     background: white;
@@ -411,17 +412,19 @@
     white-space: nowrap;
   }
   .vote-btn.approve {
-    background: #ade8f4;
-    color: #0077b6;
+    background: #d4f7d4;
+    color: #1a6b1a;
+    border: 1px solid #7ecb7e;
   }
-  .vote-btn.approve:hover { background: #0096c7; color: white; }
-  .vote-btn.approve.voted { background: #0096c7; color: white; }
+  .vote-btn.approve:hover { background: #3a9a3a; color: white; border-color: #3a9a3a; }
+  .vote-btn.approve.voted { background: #2d7a2d; color: white; border-color: #2d7a2d; }
   .vote-btn.reject {
-    background: #ffd6d6;
+    background: #fde8e8;
     color: #8b0000;
+    border: 1px solid #f5a5a5;
   }
-  .vote-btn.reject:hover { background: #e63946; color: white; }
-  .vote-btn.reject.voted { background: #e63946; color: white; }
+  .vote-btn.reject:hover { background: #dc2626; color: white; border-color: #dc2626; }
+  .vote-btn.reject.voted { background: #dc2626; color: white; border-color: #dc2626; }
   .slot-approval {
     font-size: 0.72rem;
     color: var(--muted);
@@ -700,6 +703,106 @@
   }
   .cal-fetch-btn:hover { background: #023e8a; }
 
+
+  /* ── CONFIRMED APPOINTMENTS PANEL ── */
+  .confirmed-panel {
+    background: white;
+    border: 2px solid #0096c7;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .confirmed-panel-header {
+    background: linear-gradient(135deg, #023e8a 0%, #0096c7 100%);
+    color: white;
+    padding: 0.9rem 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .confirmed-panel-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .confirmed-count {
+    background: rgba(255,255,255,0.25);
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+  .confirmed-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .confirmed-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.85rem 1.2rem;
+    border-bottom: 1px solid #e0f2fe;
+    transition: background 0.15s;
+  }
+  .confirmed-item:last-child { border-bottom: none; }
+  .confirmed-item:hover { background: #f0f9ff; }
+  .confirmed-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #0096c7;
+    flex-shrink: 0;
+  }
+  .confirmed-task-name {
+    font-weight: 600;
+    font-size: 0.92rem;
+    color: var(--ink);
+    flex: 1;
+  }
+  .confirmed-datetime {
+    font-size: 0.82rem;
+    color: #0077b6;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .confirmed-duration {
+    font-size: 0.75rem;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .btn-archive {
+    background: none;
+    border: 1px solid rgba(255,255,255,0.4);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-archive:hover { background: rgba(255,255,255,0.2); }
+  .btn-archive-item {
+    background: none;
+    border: 1px solid #b3d4e8;
+    color: var(--muted);
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-archive-item:hover { border-color: #e63946; color: #e63946; }
+  .confirmed-empty {
+    padding: 1.2rem;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
   /* ── CHECK ALL button ── */
   .toolbar {
     display: flex;
@@ -950,6 +1053,20 @@
       <div class="subtitle">Propose time slots and check availability across selected calendars.</div>
     </div>
 
+    <!-- Confirmed Appointments Panel -->
+    <div class="confirmed-panel" id="confirmed-panel">
+      <div class="confirmed-panel-header">
+        <div class="confirmed-panel-title">
+          🗓 Confirmed Appointments
+          <span class="confirmed-count" id="confirmed-count">0</span>
+        </div>
+        <button class="btn-archive" onclick="archiveAllConfirmed()" title="Archive all confirmed appointments">Archive All</button>
+      </div>
+      <div class="confirmed-list" id="confirmed-list">
+        <div class="confirmed-empty">No confirmed appointments yet — approve and confirm a time slot to see it here.</div>
+      </div>
+    </div>
+
     <div class="toolbar">
       <button class="btn-primary" onclick="checkAllSlots()" id="check-all-btn">
         <span>🔍</span> Check All Availability
@@ -1013,7 +1130,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
@@ -1023,6 +1140,7 @@ window.onload = () => {
   if (!role) openRoleModal();
   else applyRole(role);
   renderTasks();
+  renderConfirmedPanel();
   loadGoogleScript(); // initGSI is called when GSI loads; restoreSession runs after
 };
 
@@ -1507,6 +1625,80 @@ function parseDuration(durStr) {
   return 3600000;
 }
 
+
+// ────────────────────────────────────────────────
+//  CONFIRMED APPOINTMENTS PANEL
+// ────────────────────────────────────────────────
+function renderConfirmedPanel() {
+  const list = document.getElementById('confirmed-list');
+  const countEl = document.getElementById('confirmed-count');
+  if (!list) return;
+
+  // Gather all confirmed slots across all tasks (not archived)
+  const confirmed = [];
+  for (const task of tasks) {
+    for (let si = 0; si < task.slots.length; si++) {
+      const slot = task.slots[si];
+      if (slot.confirmed && !slot.archived) {
+        confirmed.push({ task, slot, si });
+      }
+    }
+  }
+
+  // Sort by datetime
+  confirmed.sort((a, b) => new Date(a.slot.datetime) - new Date(b.slot.datetime));
+
+  countEl.textContent = confirmed.length;
+
+  if (!confirmed.length) {
+    list.innerHTML = '<div class="confirmed-empty">No confirmed appointments yet — approve and confirm a time slot to see it here.</div>';
+    return;
+  }
+
+  list.innerHTML = confirmed.map(({ task, slot, si }) => {
+    const dt = new Date(slot.datetime);
+    const dateStr = dt.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+    const timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const isPast = dt < new Date();
+
+    return '<div class="confirmed-item' + (isPast ? '" style="opacity:0.6' : '') + '">'
+      + '<div class="confirmed-dot" style="background:' + (isPast ? '#adb5bd' : '#0096c7') + '"></div>'
+      + '<div class="confirmed-task-name">' + esc(task.title) + '</div>'
+      + '<div>'
+        + '<div class="confirmed-datetime">📅 ' + dateStr + ' at ' + timeStr + '</div>'
+        + (task.duration ? '<div class="confirmed-duration">⏱ ' + esc(task.duration) + '</div>' : '')
+      + '</div>'
+      + '<button class="btn-archive-item" onclick="archiveConfirmed(' + task.id + ',' + si + ')" title="Archive this appointment">Archive</button>'
+      + '</div>';
+  }).join('');
+}
+
+function archiveConfirmed(taskId, si) {
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return;
+  task.slots[si].archived = true;
+  saveTasks();
+  renderConfirmedPanel();
+  renderTasks();
+  toast('Appointment archived.', 'info');
+}
+
+function archiveAllConfirmed() {
+  let count = 0;
+  for (const task of tasks) {
+    for (const slot of task.slots) {
+      if (slot.confirmed && !slot.archived) {
+        slot.archived = true;
+        count++;
+      }
+    }
+  }
+  saveTasks();
+  renderConfirmedPanel();
+  renderTasks();
+  toast(count + ' appointment' + (count !== 1 ? 's' : '') + ' archived.', 'info');
+}
+
 // ────────────────────────────────────────────────
 //  TASKS
 // ────────────────────────────────────────────────
@@ -1666,58 +1858,93 @@ function renderSlotRow(taskId, slot, si) {
   const dateStr = dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   const timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
-  // Availability status badge
+  // Availability status
   let statusHtml = '<span class="slot-status status-checking">—</span>';
   if (slot.status === 'free') statusHtml = '<span class="slot-status status-free">✓ Free</span>';
   else if (slot.status === 'busy') statusHtml = '<span class="slot-status status-busy">✗ Busy' + (slot.busyCalendar ? ' — ' + esc(slot.busyCalendar) : '') + '</span>';
   else if (slot.status === 'private') statusHtml = '<span class="slot-status status-private">🔒 Blocked</span>';
 
-  // Who proposed this slot
   const proposer = slot.proposedBy || 'regina';
   const proposerLabel = proposer === 'regina'
-    ? '<span class="slot-proposer proposer-regina">Regina</span>'
-    : '<span class="slot-proposer proposer-assistant">Kayla/Krista</span>';
+    ? '<span class="slot-proposer proposer-regina">👤 Regina</span>'
+    : '<span class="slot-proposer proposer-assistant">🗂 Kayla/Krista</span>';
 
-  // Approvals — track per role: slot.approvals = { regina: true/false/null, assistant: true/false/null }
-  const approvals = slot.approvals || {};
-  const myRole = role === 'owner' ? 'regina' : 'assistant';
-  const otherRole = role === 'owner' ? 'assistant' : 'regina';
-  const otherLabel = role === 'owner' ? 'Kayla/Krista' : 'Regina';
-
-  const myVote = approvals[myRole];
-  const otherVote = approvals[otherRole];
-
-  const bothApproved = approvals.regina === true && approvals.assistant === true;
   const isConfirmed = slot.confirmed === true;
+  const assistantFlag = slot.assistantFlag; // 'works' | 'conflict' | null
+  const reginaApproved = slot.reginaApproved; // true | false | null
 
-  // My vote buttons
-  const myApproveBtn = '<button class="vote-btn approve' + (myVote === true ? ' voted' : '') + '" onclick="voteSlot(' + taskId + ',' + si + ',true)">👍 Works</button>';
-  const myRejectBtn  = '<button class="vote-btn reject'  + (myVote === false ? ' voted' : '') + '" onclick="voteSlot(' + taskId + ',' + si + ',false)">✕ No</button>';
+  // ── REGINA'S VIEW ──
+  let actionRow = '';
+  if (role === 'owner') {
+    if (isConfirmed) {
+      actionRow = '';
+    } else {
+      // Show assistant's flag if any
+      let assistantNote = '';
+      if (assistantFlag === 'conflict')
+        assistantNote = '<span class="approval-chip chip-rejected" style="margin-right:auto">⚠ Kayla/Krista flagged a conflict</span>';
+      else if (assistantFlag === 'works')
+        assistantNote = '<span class="approval-chip chip-approved" style="margin-right:auto">👍 Kayla/Krista says works</span>';
+      else
+        assistantNote = '<span class="approval-chip chip-pending" style="margin-right:auto">⏳ Awaiting Kayla/Krista</span>';
 
-  // Other party's status chip
-  let otherChip = '';
-  if (otherVote === true)  otherChip = '<span class="approval-chip chip-approved">' + otherLabel + ': ✓</span>';
-  else if (otherVote === false) otherChip = '<span class="approval-chip chip-rejected">' + otherLabel + ': ✕</span>';
-  else otherChip = '<span class="approval-chip chip-pending">' + otherLabel + ': pending</span>';
+      // Regina approves or declines
+      const approveBtn = '<button class="vote-btn approve' + (reginaApproved === true ? ' voted' : '') + '" '
+        + 'onclick="reginaVote(' + taskId + ',' + si + ',true)">✅ Approve</button>';
+      const declineBtn = '<button class="vote-btn reject' + (reginaApproved === false ? ' voted' : '') + '" '
+        + 'onclick="reginaVote(' + taskId + ',' + si + ',false)">❌ Decline</button>';
 
-  // Final confirm button — only show when both approved and not yet confirmed
-  const confirmBtn = bothApproved && !isConfirmed
-    ? '<button class="btn-confirm-slot" onclick="confirmSlot(' + taskId + ',' + si + ')">🗓 Confirm</button>'
+      actionRow = '<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;width:100%;margin-top:6px;padding-top:6px;border-top:1px solid #e0f0ff">'
+        + assistantNote + approveBtn + declineBtn + '</div>';
+    }
+  }
+
+  // ── KAYLA/KRISTA VIEW ──
+  if (role === 'assistant') {
+    if (isConfirmed) {
+      actionRow = '';
+    } else {
+      // Show Regina's decision
+      let reginaNote = '';
+      if (reginaApproved === true)
+        reginaNote = '<span class="approval-chip chip-approved">✅ Regina approved</span>';
+      else if (reginaApproved === false)
+        reginaNote = '<span class="approval-chip chip-rejected">❌ Regina declined</span>';
+      else
+        reginaNote = '<span class="approval-chip chip-pending">⏳ Waiting for Regina</span>';
+
+      // Assistant can flag works or conflict
+      const worksBtn = '<button class="vote-btn approve' + (assistantFlag === 'works' ? ' voted' : '') + '" '
+        + 'onclick="assistantFlag(' + taskId + ',' + si + ','works')">👍 Works for me</button>';
+      const conflictBtn = '<button class="vote-btn reject' + (assistantFlag === 'conflict' ? ' voted' : '') + '" '
+        + 'onclick="assistantFlag(' + taskId + ',' + si + ','conflict')">⚠ Conflict</button>';
+
+      actionRow = '<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;width:100%;margin-top:6px;padding-top:6px;border-top:1px solid #e0f0ff">'
+        + '<span style="font-size:0.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em">Flag for Regina:</span>'
+        + worksBtn + conflictBtn
+        + '<span style="margin-left:auto">' + reginaNote + '</span>'
+        + '</div>';
+    }
+  }
+
+  // Confirm button — only Regina, only when she approved
+  const confirmBtn = role === 'owner' && reginaApproved === true && !isConfirmed
+    ? '<button class="btn-confirm-slot" style="width:100%;margin-top:6px" onclick="confirmSlot(' + taskId + ',' + si + ')">🗓 Confirm this time</button>'
     : '';
 
-  const rowClass = isConfirmed ? 'slot-row final-confirmed' : bothApproved ? 'slot-row both-approved' : 'slot-row';
+  const rowClass = isConfirmed ? 'slot-row final-confirmed' : reginaApproved === true ? 'slot-row both-approved' : 'slot-row';
 
-  return '<div class="' + rowClass + '" id="slot-' + taskId + '-' + si + '">'
+  const inner = '<div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;width:100%">'
     + '<div class="slot-datetime">' + dateStr + '<small>' + timeStr + '</small></div>'
-    + proposerLabel
-    + statusHtml
+    + proposerLabel + statusHtml
     + '<button class="btn-check-slot" onclick="checkSingleSlot(' + taskId + ',' + si + ')">Check</button>'
-    + '<div class="slot-votes">' + myApproveBtn + myRejectBtn + '</div>'
-    + '<div class="slot-approval">' + otherChip + '</div>'
+    + (isConfirmed ? '' : '<button class="btn-icon delete" style="padding:4px 8px;margin-left:auto" onclick="removeSlot(' + taskId + ',' + si + ')">✕</button>')
+    + '</div>'
+    + actionRow
     + confirmBtn
-    + (isConfirmed ? '' : '<button class="btn-icon delete" style="padding:4px 8px" onclick="removeSlot(' + taskId + ',' + si + ')">✕</button>')
-    + (isConfirmed ? '<div class="confirmed-banner" style="width:100%">🗓 Confirmed!</div>' : '')
-    + '</div>';
+    + (isConfirmed ? '<div class="confirmed-banner" style="width:100%;margin-top:6px">🗓 Confirmed!</div>' : '');
+
+  return '<div class="' + rowClass + '" style="flex-direction:column;align-items:flex-start;gap:0" id="slot-' + taskId + '-' + si + '">' + inner + '</div>';
 }
 
 // Track avoided days per task
@@ -1927,21 +2154,26 @@ async function suggestTimes(taskId) {
   toast(`Added ${added} suggested free slot${added !== 1 ? 's' : ''}! ✨`, 'success');
 }
 
-function voteSlot(taskId, si, approve) {
+function reginaVote(taskId, si, approve) {
   const task = tasks.find(t => t.id === taskId);
   const slot = task.slots[si];
-  if (!slot.approvals) slot.approvals = {};
-  const myRole = role === 'owner' ? 'regina' : 'assistant';
-  // Toggle off if clicking same vote again
-  if (slot.approvals[myRole] === approve) {
-    slot.approvals[myRole] = null;
-  } else {
-    slot.approvals[myRole] = approve;
-  }
+  // Toggle off if same button clicked again
+  slot.reginaApproved = slot.reginaApproved === approve ? null : approve;
   saveTasks();
   renderTasks();
-  const bothApproved = slot.approvals.regina === true && slot.approvals.assistant === true;
-  if (bothApproved) toast('Both parties approved this slot! Click Confirm to finalize. 🎉', 'success');
+  if (approve) toast('Approved! Click "🗓 Confirm this time" to finalize.', 'success');
+  else toast('Declined. The slot stays visible so you can choose another.', 'info');
+}
+
+function assistantFlag(taskId, si, flag) {
+  const task = tasks.find(t => t.id === taskId);
+  const slot = task.slots[si];
+  // Toggle off if same button clicked again
+  slot.assistantFlag = slot.assistantFlag === flag ? null : flag;
+  saveTasks();
+  renderTasks();
+  if (flag === 'conflict') toast('Conflict flagged — Regina will see this.', 'info');
+  else toast('Marked as works for you — Regina will see this.', 'success');
 }
 
 function addSlot(taskId) {
@@ -1962,14 +2194,17 @@ function removeSlot(taskId, si) {
 }
 
 function confirmSlot(taskId, si) {
+  if (role !== 'owner') { toast('Only Regina can confirm a time.', 'error'); return; }
   const task = tasks.find(t => t.id === taskId);
   const slot = task.slots[si];
   const dt = new Date(slot.datetime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
   slot.confirmed = true;
+  slot.reginaApproved = true;
   task.status = 'scheduled';
   task.confirmedSlot = slot.datetime;
   saveTasks();
   renderTasks();
+  renderConfirmedPanel();
   toast('"' + task.title + '" confirmed for ' + dt + ' 🎉', 'success');
 }
 
@@ -2095,10 +2330,16 @@ function exportSummary() {
 }
 
 function clearScheduled() {
-  tasks = tasks.filter(t => t.status !== 'scheduled');
+  // Only remove tasks that have no confirmed slots (preserve confirmed)
+  tasks = tasks.filter(t => {
+    if (t.status !== 'scheduled') return true;
+    const hasConfirmed = t.slots.some(s => s.confirmed && !s.archived);
+    return hasConfirmed; // keep if it has unarchived confirmed slots
+  });
   saveTasks();
   renderTasks();
-  toast('Scheduled tasks cleared.', 'info');
+  renderConfirmedPanel();
+  toast('Cleared scheduled tasks (confirmed appointments preserved).', 'info');
 }
 
 // ────────────────────────────────────────────────
