@@ -803,6 +803,154 @@
     font-size: 0.85rem;
   }
 
+
+  /* ── EMAIL MODAL ── */
+  .email-modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(2,62,138,0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 300;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .email-modal-overlay.open { opacity: 1; pointer-events: all; }
+  .email-modal {
+    background: white;
+    border-radius: 16px;
+    width: min(680px, 95vw);
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 24px 64px rgba(0,60,130,0.25);
+    transform: scale(0.96);
+    transition: transform 0.2s;
+    overflow: hidden;
+  }
+  .email-modal-overlay.open .email-modal { transform: scale(1); }
+  .email-modal-header {
+    background: linear-gradient(135deg, #023e8a 0%, #0096c7 100%);
+    color: white;
+    padding: 1.2rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .email-modal-header h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.2rem;
+    margin: 0;
+  }
+  .email-close {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  .email-close:hover { background: rgba(255,255,255,0.35); }
+  .email-modal-body {
+    padding: 1.2rem 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .email-format-tabs {
+    display: flex;
+    gap: 0.4rem;
+    border-bottom: 2px solid #e0f2fe;
+    padding-bottom: 0.6rem;
+  }
+  .email-tab {
+    padding: 6px 16px;
+    border-radius: 6px 6px 0 0;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.83rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: #f0f9ff;
+    color: var(--muted);
+    transition: all 0.15s;
+  }
+  .email-tab.active { background: #0077b6; color: white; }
+  .email-preview {
+    background: #f8fcff;
+    border: 1px solid #b3d4e8;
+    border-radius: 10px;
+    padding: 1.2rem;
+    font-size: 0.88rem;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--ink);
+    min-height: 180px;
+    flex: 1;
+  }
+  .email-subject-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: #e0f2fe;
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+  }
+  .email-subject-label {
+    font-weight: 700;
+    color: #0077b6;
+    flex-shrink: 0;
+  }
+  .email-subject-val {
+    flex: 1;
+    color: var(--ink);
+    font-weight: 500;
+  }
+  .email-modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e0f2fe;
+    display: flex;
+    gap: 0.6rem;
+    justify-content: flex-end;
+    flex-shrink: 0;
+    background: #f8fcff;
+  }
+  .btn-copy-email {
+    background: #0077b6;
+    color: white;
+    border: none;
+    padding: 9px 20px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: background 0.15s;
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+  .btn-copy-email:hover { background: #023e8a; }
+  .btn-open-mail {
+    background: #00b4d8;
+    color: white;
+    border: none;
+    padding: 9px 20px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: background 0.15s;
+    text-decoration: none;
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+  .btn-open-mail:hover { background: #0096c7; }
+
   /* ── CHECK ALL button ── */
   .toolbar {
     display: flex;
@@ -1117,6 +1265,34 @@
   </main>
 </div>
 
+
+<!-- Email Modal -->
+<div class="email-modal-overlay" id="email-modal-overlay">
+  <div class="email-modal">
+    <div class="email-modal-header">
+      <h2>✉️ Email-Ready Format</h2>
+      <button class="email-close" onclick="closeEmailModal()">✕</button>
+    </div>
+    <div class="email-modal-body">
+      <div class="email-subject-row">
+        <span class="email-subject-label">Subject:</span>
+        <span class="email-subject-val" id="email-subject">—</span>
+      </div>
+      <div class="email-format-tabs">
+        <button class="email-tab active" onclick="switchEmailTab('formal')">Formal</button>
+        <button class="email-tab" onclick="switchEmailTab('casual')">Casual</button>
+        <button class="email-tab" onclick="switchEmailTab('brief')">Brief</button>
+      </div>
+      <div class="email-preview" id="email-preview"></div>
+    </div>
+    <div class="email-modal-footer">
+      <button class="btn-secondary" onclick="closeEmailModal()">Close</button>
+      <button class="btn-copy-email" onclick="copyEmailText()">📋 Copy to Clipboard</button>
+      <a class="btn-open-mail" id="email-mailto-link" href="#" onclick="openMailto()">✉️ Open in Mail</a>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div id="toast"></div>
 
@@ -1130,7 +1306,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
@@ -1668,7 +1844,10 @@ function renderConfirmedPanel() {
         + '<div class="confirmed-datetime">📅 ' + dateStr + ' at ' + timeStr + '</div>'
         + (task.duration ? '<div class="confirmed-duration">⏱ ' + esc(task.duration) + '</div>' : '')
       + '</div>'
+      + '<div style="display:flex;gap:0.4rem">'
+      + '<button class="btn-archive-item" style="color:#0077b6;border-color:#90caf9" onclick="openEmailModal(' + task.id + ',' + si + ')" title="Generate email">✉️ Email</button>'
       + '<button class="btn-archive-item" onclick="archiveConfirmed(' + task.id + ',' + si + ')" title="Archive this appointment">Archive</button>'
+      + '</div>'
       + '</div>';
   }).join('');
 }
@@ -1697,6 +1876,104 @@ function archiveAllConfirmed() {
   renderConfirmedPanel();
   renderTasks();
   toast(count + ' appointment' + (count !== 1 ? 's' : '') + ' archived.', 'info');
+}
+
+
+// ────────────────────────────────────────────────
+//  EMAIL FORMAT
+// ────────────────────────────────────────────────
+let emailTaskId = null;
+let emailSlotIdx = null;
+let emailTab = 'formal';
+
+function openEmailModal(taskId, si) {
+  emailTaskId = taskId;
+  emailSlotIdx = si;
+  emailTab = 'formal';
+  document.querySelectorAll('.email-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('.email-tab').classList.add('active');
+  renderEmailPreview();
+  document.getElementById('email-modal-overlay').classList.add('open');
+}
+
+function closeEmailModal() {
+  document.getElementById('email-modal-overlay').classList.remove('open');
+}
+
+function switchEmailTab(tab) {
+  emailTab = tab;
+  document.querySelectorAll('.email-tab').forEach(t => {
+    t.classList.toggle('active', t.textContent.toLowerCase() === tab);
+  });
+  renderEmailPreview();
+}
+
+function renderEmailPreview() {
+  const task = tasks.find(t => t.id === emailTaskId);
+  if (!task) return;
+  const slot = task.slots[emailSlotIdx];
+  if (!slot) return;
+
+  const dt = new Date(slot.datetime);
+  const fullDate = dt.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  const timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const dur = task.duration ? ' (' + task.duration + ')' : '';
+
+  let subject, body;
+
+  if (emailTab === 'formal') {
+    subject = 'Confirmed: ' + task.title + ' \u2014 ' + dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    body = 'Hello,' + '\n\n' + 'I am writing to confirm the following appointment:' + '\n\n'
+      + '    Event:    ' + task.title + '\n'
+      + '    Date:     ' + fullDate + '\n'
+      + '    Time:     ' + timeStr + dur + '\n'
+      + (task.desc ? '    Details:  ' + task.desc + '\n' : '')
+      + '\nPlease let me know if you have any questions or need to make any changes.\n\nThank you,\nRegina';
+  } else if (emailTab === 'casual') {
+    subject = task.title + ' \u2014 ' + dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    body = 'Hi,' + '\n\n' + 'Just confirming our ' + task.title.toLowerCase() + ' for:' + '\n\n'
+      + fullDate + '\n'
+      + timeStr + dur + '\n'
+      + (task.desc ? '\n' + task.desc + '\n' : '')
+      + '\nLooking forward to it! Let me know if anything changes.\n\nRegina';
+  } else {
+    subject = 'Confirmed: ' + task.title + ' — ' + fullDate;
+    body = task.title + '\n' + fullDate + ' at ' + timeStr + dur;
+  }
+
+  const displayBody = body;
+  const displaySubject = subject;
+
+  document.getElementById('email-subject').textContent = displaySubject;
+  document.getElementById('email-preview').textContent = displayBody;
+
+  // Store for copy/mailto
+  document.getElementById('email-modal-overlay').dataset.subject = displaySubject;
+  document.getElementById('email-modal-overlay').dataset.body = displayBody;
+}
+
+function copyEmailText() {
+  const subject = document.getElementById('email-modal-overlay').dataset.subject || '';
+  const body = document.getElementById('email-modal-overlay').dataset.body || '';
+  const full = 'Subject: ' + subject + '\n\n' + body;
+  navigator.clipboard.writeText(full).then(() => {
+    toast('Email copied to clipboard!', 'success');
+  }).catch(() => {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = full;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('Email copied to clipboard!', 'success');
+  });
+}
+
+function openMailto() {
+  const subject = encodeURIComponent(document.getElementById('email-modal-overlay').dataset.subject || '');
+  const body = encodeURIComponent(document.getElementById('email-modal-overlay').dataset.body || '');
+  window.location.href = 'mailto:?subject=' + subject + '&body=' + body;
 }
 
 // ────────────────────────────────────────────────
