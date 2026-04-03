@@ -672,7 +672,28 @@
           <option value="low">Priority: Low</option>
         </select>
         <input type="text" id="new-duration" placeholder="Duration (e.g. 1 hour, 30 min)" />
-        <input type="date" id="new-deadline" title="Deadline (optional)" />
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem">
+          <div>
+            <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px">Date From</label>
+            <input type="date" id="new-date-from" />
+          </div>
+          <div>
+            <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px">Date To</label>
+            <input type="date" id="new-date-to" />
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem">
+          <div>
+            <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px">Preferred Start</label>
+            <input type="time" id="new-pref-start" value="09:00" />
+          </div>
+          <div>
+            <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px">Latest End</label>
+            <input type="time" id="new-pref-end" value="17:00" />
+          </div>
+        </div>
+        <input type="date" id="new-deadline" title="Must schedule by (deadline)" placeholder="Deadline (optional)" />
+        <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">↑ Deadline (optional)</label>
         <button class="btn-add" onclick="addTask()">+ Add Task</button>
       </div>
     </div>
@@ -730,8 +751,10 @@ window.onload = () => {
   if (!role) openRoleModal();
   else applyRole(role);
   renderTasks();
-  loadGoogleScript();
-  // Restore saved token if still valid
+  loadGoogleScript(); // initGSI is called when GSI loads; restoreSession runs after
+};
+
+function restoreSession() {
   const savedToken = localStorage.getItem('sched_gtoken');
   const savedExpiry = parseInt(localStorage.getItem('sched_gtoken_expiry') || '0');
   if (savedToken && Date.now() < savedExpiry) {
@@ -739,7 +762,15 @@ window.onload = () => {
     document.getElementById('gcal-status').textContent = '✅ Connected';
     document.getElementById('gcal-status').style.color = 'var(--confirm)';
     document.getElementById('connect-btn').textContent = '✅ Calendar Connected';
-    // Restore calendars from saved settings
+    // Always re-fetch calendars from API to get latest
+    fetchCalendars();
+  } else if (savedToken) {
+    // Token expired — clear it
+    localStorage.removeItem('sched_gtoken');
+    localStorage.removeItem('sched_gtoken_expiry');
+    document.getElementById('gcal-status').textContent = 'Session expired — please reconnect.';
+    document.getElementById('gcal-status').style.color = 'var(--accent)';
+    // Still restore calendar list from saved settings so names/selections show
     const saved = JSON.parse(localStorage.getItem('sched_cals') || '{}');
     if (Object.keys(saved).length) {
       calendars = Object.entries(saved).map(([id, v]) => ({
@@ -815,11 +846,11 @@ function initGSI() {
     callback: handleToken,
   });
   console.log('tokenClient initialized');
-  // Auto-refresh if token is saved but expiring soon
-  const savedToken = localStorage.getItem('sched_gtoken');
+  // Restore session now that GSI is ready
+  restoreSession();
+  // Schedule silent refresh if token still valid
   const savedExpiry = parseInt(localStorage.getItem('sched_gtoken_expiry') || '0');
-  if (savedToken && Date.now() < savedExpiry) {
-    // Still valid — schedule a silent refresh 5 min before expiry
+  if (savedExpiry && Date.now() < savedExpiry) {
     const msUntilRefresh = Math.max(0, savedExpiry - Date.now() - 5 * 60 * 1000);
     setTimeout(() => silentRefresh(), msUntilRefresh);
   }
@@ -919,6 +950,8 @@ function saveCalSettings() {
   localStorage.setItem('sched_cals', JSON.stringify(obj));
 }
 
+let showAllCals = false;
+
 function renderCalendarList() {
   const el = document.getElementById('calendar-list');
   if (!calendars.length) {
@@ -926,13 +959,18 @@ function renderCalendarList() {
     return;
   }
 
-  const visibleCals = role === 'assistant' ? calendars.filter(c => !c.isRiePrivate) : calendars;
-  el.innerHTML = visibleCals.map((c) => {
+  // Filter: remove RIE private from assistant, and if showAllCals is false only show selected
+  let pool = role === 'assistant' ? calendars.filter(c => !c.isRiePrivate) : calendars;
+  const allCount = pool.length;
+  const selectedCount = pool.filter(c => c.selected).length;
+  const displayCals = showAllCals ? pool : pool.filter(c => c.selected);
+
+  const items = displayCals.map((c) => {
     const i = calendars.indexOf(c);
     const lockIcon = role === 'owner'
-      ? `<span title="${c.isRiePrivate ? 'RIE Private: hidden from Kayla/Krista' : 'Mark as RIE Private'}"
-              onclick="event.stopPropagation();togglePrivate(${i})"
-              style="font-size:0.85rem;cursor:pointer;color:${c.isRiePrivate ? 'var(--private)' : 'var(--rule)'}">🔒</span>`
+      ? '<span title="' + (c.isRiePrivate ? 'RIE Private: hidden from Kayla/Krista' : 'Mark as RIE Private') + '"'
+        + ' onclick="event.stopPropagation();togglePrivate(' + i + ')"'
+        + ' style="font-size:0.85rem;cursor:pointer;color:' + (c.isRiePrivate ? 'var(--private)' : 'var(--rule)') + '">🔒</span>'
       : '';
     return '<div class="cal-item ' + (c.selected ? 'selected' : '') + '"'
       + ' onclick="toggleCal(' + i + ')" title="' + c.name + '">'
@@ -942,6 +980,15 @@ function renderCalendarList() {
       + lockIcon
       + '</div>';
   }).join('');
+
+  const toggleLabel = showAllCals
+    ? '▲ Show active only (' + selectedCount + ')'
+    : '▼ Show all calendars (' + allCount + ')';
+
+  el.innerHTML = items
+    + '<button onclick="showAllCals=!showAllCals;renderCalendarList()" '
+    + 'style="margin-top:0.4rem;background:none;border:none;font-size:0.75rem;color:var(--muted);cursor:pointer;padding:2px 0;text-align:left;font-family:inherit;">'
+    + toggleLabel + '</button>';
 }
 
 function toggleCal(i) {
@@ -976,6 +1023,10 @@ function addTask() {
     desc: document.getElementById('new-desc').value.trim(),
     priority: document.getElementById('new-priority').value,
     duration: document.getElementById('new-duration').value.trim(),
+    dateFrom: document.getElementById('new-date-from').value,
+    dateTo: document.getElementById('new-date-to').value,
+    prefStart: document.getElementById('new-pref-start').value || '09:00',
+    prefEnd: document.getElementById('new-pref-end').value || '17:00',
     deadline: document.getElementById('new-deadline').value,
     status: 'pending',
     slots: [],
@@ -985,9 +1036,11 @@ function addTask() {
   renderTasks();
 
   // Reset form
-  ['new-title','new-desc','new-duration','new-deadline'].forEach(id => document.getElementById(id).value = '');
+  ['new-title','new-desc','new-duration','new-date-from','new-date-to','new-deadline'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('new-priority').value = 'medium';
-  toast('Task added!', 'success');
+  document.getElementById('new-pref-start').value = '09:00';
+  document.getElementById('new-pref-end').value = '17:00';
+  toast('Task added! Use ✨ Suggest Times to find availability.', 'success');
 }
 
 function deleteTask(id) {
@@ -1040,19 +1093,19 @@ function renderTaskCard(task) {
         <div class="suggest-grid">
           <div>
             <label style="font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px">Date Range From</label>
-            <input type="date" id="suggest-from-${task.id}" />
+            <input type="date" id="suggest-from-${task.id}" value="${task.dateFrom || ''}" />
           </div>
           <div>
             <label style="font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px">Date Range To</label>
-            <input type="date" id="suggest-to-${task.id}" />
+            <input type="date" id="suggest-to-${task.id}" value="${task.dateTo || ''}" />
           </div>
           <div>
             <label style="font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px">Earliest Time</label>
-            <input type="time" id="suggest-start-${task.id}" value="09:00" />
+            <input type="time" id="suggest-start-${task.id}" value="${task.prefStart || '09:00'}" />
           </div>
           <div>
             <label style="font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px">Latest End Time</label>
-            <input type="time" id="suggest-end-${task.id}" value="17:00" />
+            <input type="time" id="suggest-end-${task.id}" value="${task.prefEnd || '17:00'}" />
           </div>
           <div>
             <label style="font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px">How Many Options</label>
