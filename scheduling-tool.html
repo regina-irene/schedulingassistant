@@ -1013,7 +1013,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
@@ -1830,8 +1830,11 @@ async function suggestTimes(taskId) {
   btn.innerHTML = '<span class="spin"></span> Fetching busy times…';
   const allBusyIntervals = [];
   try {
+    // rangeMin = start of first day, rangeMax = end of last day + duration buffer
     const rangeMin = new Date(dateFrom.getFullYear(), dateFrom.getMonth(), dateFrom.getDate(), 0, 0, 0).toISOString();
-    const rangeMax = new Date(dateTo.getFullYear(),   dateTo.getMonth(),   dateTo.getDate()+1, 0, 0, 0).toISOString();
+    const rangeMaxDate = new Date(dateTo.getFullYear(), dateTo.getMonth(), dateTo.getDate(), endH, endM, 0);
+    rangeMaxDate.setTime(rangeMaxDate.getTime() + durationMs); // add duration so end-of-day events are caught
+    const rangeMax = rangeMaxDate.toISOString();
 
     for (const cal of selectedCals) {
       if (cal.isRiePrivate) {
@@ -1857,9 +1860,14 @@ async function suggestTimes(taskId) {
 
   btn.innerHTML = '<span class="spin"></span> Finding free slots…';
 
+  console.log('Suggest: ' + candidates.length + ' candidates, ' + allBusyIntervals.length + ' busy intervals, looking for ' + count + ' slots');
+  console.log('Busy intervals:', allBusyIntervals.map(b => b.start.toLocaleString() + ' – ' + b.end.toLocaleString()));
+
   // Now check each candidate against the pre-fetched busy intervals
   const found = [];
   const foundDays = new Set();
+  const skippedBusy = [];
+  const skippedDayLimit = [];
 
   for (const slot of candidates) {
     if (found.length >= count) break;
@@ -1867,17 +1875,26 @@ async function suggestTimes(taskId) {
     // Local day key to avoid UTC offset issues
     const dayKey = localDayKey(slot);
 
-    // For 4h+ events, only one slot per day
-    if (longEvent && foundDays.has(dayKey)) continue;
-
     const slotEnd = new Date(slot.getTime() + durationMs);
     const conflict = allBusyIntervals.some(b => slot < b.end && slotEnd > b.start);
+
+    if (longEvent && foundDays.has(dayKey)) {
+      skippedDayLimit.push(slot.toLocaleString());
+      continue;
+    }
 
     if (!conflict) {
       found.push(slot);
       foundDays.add(dayKey);
+    } else {
+      const blocker = allBusyIntervals.find(b => slot < b.end && new Date(slot.getTime() + durationMs) > b.start);
+      skippedBusy.push(slot.toLocaleString() + ' blocked by ' + (blocker ? blocker.start.toLocaleString() + '–' + blocker.end.toLocaleString() : '?'));
     }
   }
+
+  console.log('Found ' + found.length + ' free slots:', found.map(d => d.toLocaleString()));
+  console.log('Skipped (busy):', skippedBusy);
+  console.log('Skipped (day limit):', skippedDayLimit);
 
   btn.disabled = false;
   btn.innerHTML = '<span>✨</span> Suggest Available Times';
@@ -1888,10 +1905,17 @@ async function suggestTimes(taskId) {
   }
 
   // Add found slots to task (avoid duplicates)
+  // Use local time string (not UTC toISOString) so times display correctly
+  function toLocalISO(d) {
+    const pad = n => String(n).padStart(2,'0');
+    return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate())
+      + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
   const existing = new Set(task.slots.map(s => s.datetime));
   let added = 0;
   for (const dt of found) {
-    const iso = dt.toISOString().slice(0,16);
+    const iso = toLocalISO(dt);
     if (!existing.has(iso)) {
       task.slots.push({ datetime: iso, status: 'free', proposedBy: role === 'owner' ? 'regina' : 'assistant', approvals: {} });
       existing.add(iso);
