@@ -1690,9 +1690,9 @@
       <div>
         <div class="section-label" style="margin-bottom:0.5rem">Who are you notifying?</div>
         <div class="notify-recipient-btns">
-          <button class="notify-recip-btn" onclick="selectRecipient(this,'Kayla','')">Kayla</button>
-          <button class="notify-recip-btn" onclick="selectRecipient(this,'Krista','')">Krista</button>
-          <button class="notify-recip-btn" onclick="selectRecipient(this,'Regina','')">Regina</button>
+          <button class="notify-recip-btn" onclick="selectRecipient(this,'Kayla','kayla@edwardsfamilylaw.com')">Kayla</button>
+          <button class="notify-recip-btn" onclick="selectRecipient(this,'Krista','krista@edwardsfamilylaw.com')">Krista</button>
+          <button class="notify-recip-btn" onclick="selectRecipient(this,'Regina','regina@edwardsfamilylaw.com')">Regina</button>
         </div>
         <div style="margin-top:0.6rem">
           <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px">Their email address</label>
@@ -1732,7 +1732,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
