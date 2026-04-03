@@ -1732,7 +1732,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
@@ -2964,6 +2964,17 @@ function renderTaskCard(task) {
         </div>
       </div>
 
+      <div class="time-slots">
+        <div class="slots-label">Proposed Time Slots <span style="font-weight:400;font-size:0.75rem;color:var(--muted)">— either party can propose &amp; vote</span></div>
+        <div class="slots-grid" id="slots-${task.id}">
+          ${slotsHtml || '<div style="font-size:0.82rem;color:var(--muted)">No time slots yet — use ✨ Suggest below or add manually.</div>'}
+        </div>
+        <div class="add-slot-row">
+          <input type="datetime-local" id="slot-input-${task.id}" />
+          <button class="btn-add-slot" onclick="addSlot(${task.id})">+ Add Slot</button>
+        </div>
+      </div>
+
       <div class="suggest-panel">
         <div class="slots-label">✨ Smart Suggest Times</div>
         <div class="suggest-grid">
@@ -2986,19 +2997,19 @@ function renderTaskCard(task) {
           <div>
             <label style="font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px">How Many Options</label>
             <select id="suggest-count-${task.id}">
-              <option value="3">3 suggestions</option>
-              <option value="5" selected>5 suggestions</option>
-              <option value="8">8 suggestions</option>
-              <option value="10">10 suggestions</option>
+              <option value="3" ${task.suggestCount === '3' ? 'selected' : ''}>3 suggestions</option>
+              <option value="5" ${!task.suggestCount || task.suggestCount === '5' ? 'selected' : ''}>5 suggestions</option>
+              <option value="8" ${task.suggestCount === '8' ? 'selected' : ''}>8 suggestions</option>
+              <option value="10" ${task.suggestCount === '10' ? 'selected' : ''}>10 suggestions</option>
             </select>
           </div>
           <div>
             <label style="font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px">Interval</label>
             <select id="suggest-interval-${task.id}">
-              <option value="30">Every 30 min</option>
-              <option value="60" selected>Every 1 hour</option>
-              <option value="120">Every 2 hours</option>
-              <option value="1440">Once per day</option>
+              <option value="30" ${task.suggestInterval === '30' ? 'selected' : ''}>Every 30 min</option>
+              <option value="60" ${!task.suggestInterval || task.suggestInterval === '60' ? 'selected' : ''}>Every 1 hour</option>
+              <option value="120" ${task.suggestInterval === '120' ? 'selected' : ''}>Every 2 hours</option>
+              <option value="1440" ${task.suggestInterval === '1440' ? 'selected' : ''}>Once per day</option>
             </select>
           </div>
         </div>
@@ -3013,21 +3024,10 @@ function renderTaskCard(task) {
           <span class="day-btn" data-day="6" onclick="toggleAvoidDay(${task.id},6)">Sat</span>
         </div>
         <label style="font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px;margin-top:0.4rem">Other Rules / Notes</label>
-        <textarea class="suggest-rules" id="suggest-rules-${task.id}" placeholder="e.g. Prefer mornings, avoid lunch hour, no back-to-back meetings…" rows="2"></textarea>
-        <button class="btn-suggest" onclick="suggestTimes(${task.id})" id="suggest-btn-${task.id}">
+        <textarea class="suggest-rules" id="suggest-rules-${task.id}" placeholder="e.g. Prefer mornings, avoid lunch hour, no back-to-back meetings…" rows="2">${task.suggestRules || ''}</textarea>
+        <button class="btn-suggest" onclick="saveSuggestParams(${task.id});suggestTimes(${task.id})" id="suggest-btn-${task.id}">
           <span>✨</span> Suggest Available Times
         </button>
-      </div>
-
-      <div class="time-slots">
-        <div class="slots-label">Proposed Time Slots <span style="font-weight:400;font-size:0.75rem;color:var(--muted)">— either party can propose &amp; vote</span></div>
-        <div class="slots-grid" id="slots-${task.id}">
-          ${slotsHtml || '<div style="font-size:0.82rem;color:var(--muted)">No time slots yet — use Suggest above or add manually below.</div>'}
-        </div>
-        <div class="add-slot-row">
-          <input type="datetime-local" id="slot-input-${task.id}" />
-          <button class="btn-add-slot" onclick="addSlot(${task.id})">+ Add Slot</button>
-        </div>
       </div>
 
       <div class="task-actions">
@@ -3383,9 +3383,30 @@ function setAssistantFlag(taskId, si, flag) {
   else toast('Marked as works for you — Regina will see this.', 'success');
 }
 
+
+function saveSuggestParams(taskId) {
+  // Save current suggest panel inputs to task object so they survive re-renders
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return;
+  const get = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+  task.dateFrom   = get('suggest-from-'     + taskId) || task.dateFrom;
+  task.dateTo     = get('suggest-to-'       + taskId) || task.dateTo;
+  task.prefStart  = get('suggest-start-'    + taskId) || task.prefStart;
+  task.prefEnd    = get('suggest-end-'      + taskId) || task.prefEnd;
+  task.suggestRules = get('suggest-rules-'  + taskId);
+  // Save count/interval selections too
+  const countEl    = document.getElementById('suggest-count-'    + taskId);
+  const intervalEl = document.getElementById('suggest-interval-' + taskId);
+  if (countEl)    task.suggestCount    = countEl.value;
+  if (intervalEl) task.suggestInterval = intervalEl.value;
+  saveTasks();
+}
+
 function addSlot(taskId) {
   const input = document.getElementById('slot-input-' + taskId);
   if (!input.value) { toast('Select a date and time for the slot.', 'error'); return; }
+  // Save suggest params before re-render so they persist
+  saveSuggestParams(taskId);
   const task = tasks.find(t => t.id === taskId);
   task.slots.push({ datetime: input.value, status: 'unchecked', proposedBy: role === 'owner' ? 'regina' : 'assistant', approvals: {} });
   input.value = '';
