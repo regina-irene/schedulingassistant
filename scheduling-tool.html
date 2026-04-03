@@ -926,11 +926,11 @@
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem">
           <div>
-            <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px">Preferred Start</label>
+            <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px">Schedule After</label>
             <input type="time" id="new-pref-start" value="09:00" />
           </div>
           <div>
-            <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px">Latest End</label>
+            <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px">Must End By</label>
             <input type="time" id="new-pref-end" value="17:00" />
           </div>
         </div>
@@ -1013,7 +1013,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
@@ -1599,11 +1599,11 @@ function renderTaskCard(task) {
             <input type="date" id="suggest-to-${task.id}" value="${task.dateTo || ''}" />
           </div>
           <div>
-            <label style="font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px">Earliest Time</label>
+            <label style="font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px">Schedule After</label>
             <input type="time" id="suggest-start-${task.id}" value="${task.prefStart || '09:00'}" />
           </div>
           <div>
-            <label style="font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px">Latest End Time</label>
+            <label style="font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px">Must End By</label>
             <input type="time" id="suggest-end-${task.id}" value="${task.prefEnd || '17:00'}" />
           </div>
           <div>
@@ -1621,6 +1621,7 @@ function renderTaskCard(task) {
               <option value="30">Every 30 min</option>
               <option value="60" selected>Every 1 hour</option>
               <option value="120">Every 2 hours</option>
+              <option value="1440">Once per day</option>
             </select>
           </div>
         </div>
@@ -1764,21 +1765,31 @@ async function suggestTimes(taskId) {
   btn.disabled = true;
   btn.innerHTML = '<span class="spin"></span> Checking availability…';
 
-  // Build candidate slots: every `interval` minutes within time window across date range
+  // Build candidate slots within time window across date range
   const [startH, startM] = startT.split(':').map(Number);
   const [endH,   endM  ] = endT.split(':').map(Number);
   const endMinutes = endH * 60 + endM;
+  const oncePerDay = interval >= 1440;
 
   const candidates = [];
   const cursor = new Date(dateFrom);
   while (cursor <= dateTo) {
     if (!avoided.has(cursor.getDay())) {
-      let slotM = startH * 60 + startM;
-      while (slotM + (durationMs / 60000) <= endMinutes) {
+      if (oncePerDay) {
+        // Just one candidate per day at the preferred start time
         const slotDate = new Date(cursor);
-        slotDate.setHours(Math.floor(slotM / 60), slotM % 60, 0, 0);
-        if (slotDate > new Date()) candidates.push(new Date(slotDate));
-        slotM += interval;
+        slotDate.setHours(startH, startM, 0, 0);
+        if (slotDate > new Date() && (startH * 60 + startM) + (durationMs / 60000) <= endMinutes) {
+          candidates.push(new Date(slotDate));
+        }
+      } else {
+        let slotM = startH * 60 + startM;
+        while (slotM + (durationMs / 60000) <= endMinutes) {
+          const slotDate = new Date(cursor);
+          slotDate.setHours(Math.floor(slotM / 60), slotM % 60, 0, 0);
+          if (slotDate > new Date()) candidates.push(new Date(slotDate));
+          slotM += interval;
+        }
       }
     }
     cursor.setDate(cursor.getDate() + 1);
