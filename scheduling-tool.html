@@ -1692,7 +1692,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
@@ -2126,9 +2126,11 @@ async function fetchEvents(calId, timeMin, timeMax) {
   const d = await r.json();
   if (d.error) return [];
   return (d.items || []).filter(e => {
-    // Skip all-day events (no dateTime) and ignored titles
-    if (!e.start?.dateTime) return false;
+    if (!e.start?.dateTime || !e.end?.dateTime) return false; // skip all-day events
     if (shouldIgnoreEvent(e.summary)) return false;
+    const s = new Date(e.start.dateTime);
+    const en = new Date(e.end.dateTime);
+    if (isNaN(s.getTime()) || isNaN(en.getTime())) return false; // skip invalid dates
     return true;
   }).map(e => ({
     start: new Date(e.start.dateTime),
@@ -2158,15 +2160,24 @@ function calShift(days) {
 
 async function fetchAndRenderCal() {
   if (!gToken) { toast('Connect Google Calendar first.', 'error'); return; }
-  if (!calStartDate) calStartDate = getWeekStart(new Date());
+  if (!calStartDate || isNaN(calStartDate.getTime())) calStartDate = getWeekStart(new Date());
 
   const container = document.getElementById('cal-grid-container');
   container.innerHTML = '<div style="padding:1.2rem;text-align:center;color:var(--muted)"><span class="spin" style="border-color:rgba(0,119,182,0.3);border-top-color:#0077b6;width:20px;height:20px;display:inline-block"></span> Loading calendar...</div>';
 
-  const timeMin = new Date(calStartDate).toISOString();
-  const weekEnd = new Date(calStartDate);
-  weekEnd.setDate(weekEnd.getDate() + 7);
-  const timeMax = weekEnd.toISOString();
+  let timeMin, timeMax;
+  try {
+    timeMin = new Date(calStartDate).toISOString();
+    const weekEnd = new Date(calStartDate);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+    timeMax = weekEnd.toISOString();
+  } catch(e) {
+    calStartDate = getWeekStart(new Date());
+    timeMin = new Date(calStartDate).toISOString();
+    const weekEnd = new Date(calStartDate);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+    timeMax = weekEnd.toISOString();
+  }
 
   const selectedCals = calendars.filter(c => c.selected && !(c.isRiePrivate && role === 'assistant'));
   if (!selectedCals.length) { container.innerHTML = '<div style="padding:1.2rem;text-align:center;color:var(--muted)">No calendars selected.</div>'; return; }
@@ -2191,7 +2202,9 @@ async function fetchAndRenderCal() {
           const start = new Date(b.start), end = new Date(b.end);
           const dateKey = start.toISOString().slice(0,10);
           if (!calBusyData[dateKey]) calBusyData[dateKey] = [];
-          calBusyData[dateKey].push({ start, end, title: 'Private', type: 'private-block' });
+          if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+            calBusyData[dateKey].push({ start, end, title: 'Private', type: 'private-block' });
+          }
         }
       } else {
         for (const e of events) {
@@ -2233,7 +2246,9 @@ function renderCalView() {
   const proposedSlots = [];
   for (const task of tasks) {
     for (const slot of task.slots) {
+      if (!slot.datetime) continue;
       const start = new Date(slot.datetime);
+      if (isNaN(start.getTime())) continue; // skip unparseable slots
       const durationMs = parseDuration(task.duration);
       const end = new Date(start.getTime() + durationMs);
       const dateKey = start.toISOString().slice(0,10);
@@ -3155,8 +3170,9 @@ async function suggestTimes(taskId) {
   try {
     // rangeMin = start of first day, rangeMax = end of last day + duration buffer
     const rangeMin = new Date(dateFrom.getFullYear(), dateFrom.getMonth(), dateFrom.getDate(), 0, 0, 0).toISOString();
-    const rangeMaxDate = new Date(dateTo.getFullYear(), dateTo.getMonth(), dateTo.getDate(), endH, endM, 0);
-    rangeMaxDate.setTime(rangeMaxDate.getTime() + durationMs); // add duration so end-of-day events are caught
+    // Use 11:59pm on the last day + duration buffer (endH/endM may not be defined in all call paths)
+    const rangeMaxDate = new Date(dateTo.getFullYear(), dateTo.getMonth(), dateTo.getDate(), 23, 59, 59);
+    rangeMaxDate.setTime(rangeMaxDate.getTime() + (durationMs || 0));
     const rangeMax = rangeMaxDate.toISOString();
 
     for (const cal of selectedCals) {
