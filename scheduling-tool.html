@@ -1130,7 +1130,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
@@ -1915,9 +1915,9 @@ function renderSlotRow(taskId, slot, si) {
 
       // Assistant can flag works or conflict
       const worksBtn = '<button class="vote-btn approve' + (assistantFlag === 'works' ? ' voted' : '') + '" '
-        + 'onclick="assistantFlag(' + taskId + ',' + si + ','works')">👍 Works for me</button>';
+        + 'onclick="setAssistantFlag(' + taskId + ',' + si + ',\'works\')">👍 Works for me</button>';
       const conflictBtn = '<button class="vote-btn reject' + (assistantFlag === 'conflict' ? ' voted' : '') + '" '
-        + 'onclick="assistantFlag(' + taskId + ',' + si + ','conflict')">⚠ Conflict</button>';
+        + 'onclick="setAssistantFlag(' + taskId + ',' + si + ',\'conflict\')">⚠ Conflict</button>';
 
       actionRow = '<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;width:100%;margin-top:6px;padding-top:6px;border-top:1px solid #e0f0ff">'
         + '<span style="font-size:0.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em">Flag for Regina:</span>'
@@ -2165,7 +2165,7 @@ function reginaVote(taskId, si, approve) {
   else toast('Declined. The slot stays visible so you can choose another.', 'info');
 }
 
-function assistantFlag(taskId, si, flag) {
+function setAssistantFlag(taskId, si, flag) {
   const task = tasks.find(t => t.id === taskId);
   const slot = task.slots[si];
   // Toggle off if same button clicked again
