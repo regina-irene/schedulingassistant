@@ -7,33 +7,38 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --ink: #1a1a2e;
-    --paper: #f5f2ec;
-    --cream: #ede9e0;
-    --accent: #c4622d;
-    --accent-light: #e8b49a;
-    --muted: #7a7570;
-    --rule: #d6d0c8;
-    --confirm: #2d6a4f;
-    --confirm-light: #95d5b2;
-    --shadow: rgba(26,26,46,0.10);
-    --private: #8b2fc9;
+    --ink: #0a2540;
+    --paper: #eef6fb;
+    --cream: #dceef8;
+    --accent: #0077b6;
+    --accent-light: #90caf9;
+    --accent-bright: #00b4d8;
+    --muted: #4a7a99;
+    --rule: #b3d4e8;
+    --confirm: #0096c7;
+    --confirm-light: #ade8f4;
+    --shadow: rgba(0,60,100,0.12);
+    --private: #6a0dad;
     --private-light: #d8b4fe;
+    --header-bg: #023e8a;
+    --sidebar-bg: #e0f2fe;
+    --card-bg: #ffffff;
+    --highlight: #caf0f8;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
     font-family: 'DM Sans', sans-serif;
-    background: var(--paper);
+    background: #f0f8ff;
     color: var(--ink);
     min-height: 100vh;
   }
 
   /* ── HEADER ── */
   header {
-    background: var(--ink);
-    color: var(--paper);
+    background: var(--header-bg);
+    color: white;
     padding: 0 2rem;
     display: flex;
     align-items: center;
@@ -42,7 +47,7 @@
     position: sticky;
     top: 0;
     z-index: 100;
-    box-shadow: 0 2px 16px var(--shadow);
+    box-shadow: 0 4px 20px rgba(0,60,130,0.25);
   }
 
   .logo {
@@ -50,7 +55,7 @@
     font-size: 1.4rem;
     letter-spacing: 0.02em;
   }
-  .logo span { color: var(--accent-light); font-style: italic; }
+  .logo span { color: #7dd3fc; font-style: italic; }
 
   .header-right { display: flex; align-items: center; gap: 1rem; }
 
@@ -64,11 +69,11 @@
     background: rgba(255,255,255,0.12);
     color: var(--paper);
   }
-  .role-badge.owner { background: var(--accent); }
-  .role-badge.assistant-role { background: #4a6fa5; }
+  .role-badge.owner { background: #0096c7; }
+  .role-badge.assistant-role { background: #0077b6; }
 
   #auth-btn {
-    background: var(--accent);
+    background: #00b4d8;
     color: white;
     border: none;
     padding: 8px 18px;
@@ -79,19 +84,19 @@
     cursor: pointer;
     transition: background 0.2s;
   }
-  #auth-btn:hover { background: #a8501f; }
+  #auth-btn:hover { background: #0096c7; }
 
   /* ── LAYOUT ── */
   .app-grid {
     display: grid;
-    grid-template-columns: 300px 1fr;
+    grid-template-columns: 380px 1fr;
     min-height: calc(100vh - 64px);
   }
 
   /* ── SIDEBAR ── */
   aside {
-    background: var(--cream);
-    border-right: 1px solid var(--rule);
+    background: var(--sidebar-bg);
+    border-right: 2px solid var(--rule);
     padding: 1.5rem;
     display: flex;
     flex-direction: column;
@@ -104,7 +109,7 @@
     font-weight: 600;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: #0077b6;
     margin-bottom: 0.6rem;
   }
 
@@ -124,11 +129,11 @@
     transition: border-color 0.15s, box-shadow 0.15s;
     user-select: none;
   }
-  .cal-item.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-light); }
+  .cal-item.selected { border-color: var(--accent); box-shadow: 0 0 0 2px #90caf9; background: #f0f9ff; }
   .cal-item.private { opacity: 0.6; cursor: default; }
   .cal-swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
   .cal-name { flex: 1; }
-  .cal-check { font-size: 0.8rem; color: var(--accent); display: none; }
+  .cal-check { font-size: 0.8rem; color: #0096c7; display: none; }
   .cal-item.selected .cal-check { display: block; }
   .private-lock { font-size: 0.8rem; color: var(--private); margin-left: auto; }
 
@@ -151,10 +156,10 @@
     outline: none;
     transition: border-color 0.15s;
   }
-  .add-form input:focus, .add-form select:focus, .add-form textarea:focus { border-color: var(--accent); }
+  .add-form input:focus, .add-form select:focus, .add-form textarea:focus { border-color: #00b4d8; box-shadow: 0 0 0 2px #caf0f8; }
   .add-form textarea { resize: vertical; min-height: 60px; }
   .btn-add {
-    background: var(--ink);
+    background: #023e8a;
     color: white;
     border: none;
     padding: 9px;
@@ -165,7 +170,7 @@
     cursor: pointer;
     transition: background 0.2s;
   }
-  .btn-add:hover { background: var(--accent); }
+  .btn-add:hover { background: #0077b6; }
 
   /* ── MAIN PANEL ── */
   main {
@@ -182,7 +187,7 @@
     color: var(--ink);
     line-height: 1.15;
   }
-  .page-title span { color: var(--accent); font-style: italic; }
+  .page-title span { color: #0096c7; font-style: italic; }
 
   .subtitle { color: var(--muted); font-size: 0.9rem; margin-top: 0.2rem; }
 
@@ -191,8 +196,9 @@
 
   .task-card {
     background: white;
-    border: 1px solid var(--rule);
+    border: 1px solid #b3d4e8;
     border-radius: 12px;
+    border-top: 3px solid #00b4d8;
     overflow: hidden;
     transition: box-shadow 0.2s;
     animation: slideIn 0.3s ease;
@@ -248,9 +254,9 @@
 
   /* Time slots section */
   .time-slots {
-    border-top: 1px solid var(--rule);
+    border-top: 1px solid #b3d4e8;
     padding: 0.8rem 1.2rem;
-    background: #fafaf8;
+    background: #f0f9ff;
   }
 
   .slots-label {
@@ -258,7 +264,7 @@
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: #0077b6;
     margin-bottom: 0.6rem;
   }
 
@@ -294,7 +300,7 @@
 
   .btn-check-slot {
     background: none;
-    border: 1px solid var(--accent);
+    border: 1px solid #0096c7;
     color: var(--accent);
     padding: 4px 10px;
     border-radius: 6px;
@@ -307,7 +313,7 @@
   .btn-check-slot:hover { background: var(--accent); color: white; }
 
   .btn-confirm-slot {
-    background: var(--confirm);
+    background: #0096c7;
     border: none;
     color: white;
     padding: 4px 10px;
@@ -318,7 +324,7 @@
     transition: all 0.15s;
     white-space: nowrap;
   }
-  .btn-confirm-slot:hover { background: #1b4332; }
+  .btn-confirm-slot:hover { background: #023e8a; }
   .btn-confirm-slot:disabled { opacity: 0.4; cursor: default; }
 
   /* Add slot */
@@ -373,6 +379,81 @@
   .btn-icon.delete:hover { border-color: #e63946; color: #e63946; }
 
 
+
+  /* ── COLLABORATIVE SLOTS ── */
+  .slot-row { position: relative; }
+  .slot-proposer {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 10px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .proposer-regina { background: #e0f2fe; color: #0077b6; }
+  .proposer-assistant { background: #caf0f8; color: #023e8a; }
+  .slot-votes {
+    display: flex;
+    gap: 0.3rem;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .vote-btn {
+    border: none;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .vote-btn.approve {
+    background: #ade8f4;
+    color: #0077b6;
+  }
+  .vote-btn.approve:hover { background: #0096c7; color: white; }
+  .vote-btn.approve.voted { background: #0096c7; color: white; }
+  .vote-btn.reject {
+    background: #ffd6d6;
+    color: #8b0000;
+  }
+  .vote-btn.reject:hover { background: #e63946; color: white; }
+  .vote-btn.reject.voted { background: #e63946; color: white; }
+  .slot-approval {
+    font-size: 0.72rem;
+    color: var(--muted);
+    display: flex;
+    gap: 0.3rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .approval-chip {
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 0.68rem;
+    font-weight: 600;
+  }
+  .chip-approved { background: var(--confirm-light); color: var(--confirm); }
+  .chip-rejected { background: #ffd6d6; color: #8b0000; }
+  .chip-pending { background: #f0f0f0; color: var(--muted); }
+  .slot-row.both-approved { border-color: #00b4d8; background: #e0f7fa; }
+  .slot-row.final-confirmed { border-color: #0077b6; background: #caf0f8; }
+  .confirmed-banner {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #0077b6;
+    padding: 6px 10px;
+    background: #ade8f4;
+    border-radius: 6px;
+    margin-top: 0.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
   /* ── SUGGEST TIMES PANEL ── */
   .suggest-panel {
     border-top: 1px solid var(--rule);
@@ -424,7 +505,7 @@
     text-decoration: line-through;
   }
   .btn-suggest {
-    background: #2a6099;
+    background: #0077b6;
     color: white;
     border: none;
     padding: 8px 16px;
@@ -440,7 +521,7 @@
     justify-content: center;
     gap: 0.4rem;
   }
-  .btn-suggest:hover { background: #1a4a7a; }
+  .btn-suggest:hover { background: #023e8a; }
   .btn-suggest:disabled { opacity: 0.5; cursor: default; }
   .suggest-rules {
     width: 100%;
@@ -466,7 +547,7 @@
     flex-wrap: wrap;
   }
   .btn-primary {
-    background: var(--accent);
+    background: #0077b6;
     color: white;
     border: none;
     padding: 10px 22px;
@@ -480,7 +561,7 @@
     align-items: center;
     gap: 0.5rem;
   }
-  .btn-primary:hover { background: #a8501f; }
+  .btn-primary:hover { background: #023e8a; }
   .btn-primary:disabled { opacity: 0.5; cursor: default; }
 
   .btn-secondary {
@@ -577,8 +658,8 @@
     cursor: pointer;
     transition: all 0.15s;
   }
-  .role-option:hover { border-color: var(--accent); }
-  .role-option.active { border-color: var(--accent); background: #fff8f5; }
+  .role-option:hover { border-color: #00b4d8; }
+  .role-option.active { border-color: #0096c7; background: #e0f7fa; }
   .role-icon { font-size: 1.5rem; }
   .role-detail strong { display: block; font-weight: 600; }
   .role-detail small { color: var(--muted); font-size: 0.8rem; }
@@ -741,7 +822,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
@@ -952,8 +1033,6 @@ function saveCalSettings() {
 
 let showAllCals = false;
 
-let showAllCals = false;
-
 function renderCalendarList() {
   const el = document.getElementById('calendar-list');
   if (!calendars.length) {
@@ -961,6 +1040,7 @@ function renderCalendarList() {
     return;
   }
 
+  // Filter: remove RIE private from assistant, and if showAllCals is false only show selected
   let pool = role === 'assistant' ? calendars.filter(c => !c.isRiePrivate) : calendars;
   const allCount = pool.length;
   const selectedCount = pool.filter(c => c.selected).length;
@@ -991,6 +1071,7 @@ function renderCalendarList() {
     + 'style="margin-top:0.4rem;background:none;border:none;font-size:0.75rem;color:var(--muted);cursor:pointer;padding:2px 0;text-align:left;font-family:inherit;">'
     + toggleLabel + '</button>';
 }
+
 function toggleCal(i) {
   if (calendars[i].isRiePrivate && role === 'assistant') return;
   calendars[i].selected = !calendars[i].selected;
@@ -1142,7 +1223,7 @@ function renderTaskCard(task) {
       </div>
 
       <div class="time-slots">
-        <div class="slots-label">Proposed Time Slots</div>
+        <div class="slots-label">Proposed Time Slots <span style="font-weight:400;font-size:0.75rem;color:var(--muted)">— either party can propose &amp; vote</span></div>
         <div class="slots-grid" id="slots-${task.id}">
           ${slotsHtml || '<div style="font-size:0.82rem;color:var(--muted)">No time slots yet — use Suggest above or add manually below.</div>'}
         </div>
@@ -1165,25 +1246,58 @@ function renderSlotRow(taskId, slot, si) {
   const dateStr = dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   const timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
+  // Availability status badge
   let statusHtml = '<span class="slot-status status-checking">—</span>';
   if (slot.status === 'free') statusHtml = '<span class="slot-status status-free">✓ Free</span>';
-  else if (slot.status === 'busy') statusHtml = `<span class="slot-status status-busy">✗ Busy${slot.busyCalendar ? ' — ' + esc(slot.busyCalendar) : ''}</span>`;
+  else if (slot.status === 'busy') statusHtml = '<span class="slot-status status-busy">✗ Busy' + (slot.busyCalendar ? ' — ' + esc(slot.busyCalendar) : '') + '</span>';
   else if (slot.status === 'private') statusHtml = '<span class="slot-status status-private">🔒 Blocked</span>';
 
-  const canConfirm = slot.status === 'free';
+  // Who proposed this slot
+  const proposer = slot.proposedBy || 'regina';
+  const proposerLabel = proposer === 'regina'
+    ? '<span class="slot-proposer proposer-regina">Regina</span>'
+    : '<span class="slot-proposer proposer-assistant">Kayla/Krista</span>';
 
-  return `
-    <div class="slot-row" id="slot-${taskId}-${si}">
-      <div class="slot-datetime">
-        ${dateStr}
-        <small>${timeStr}</small>
-      </div>
-      ${statusHtml}
-      <button class="btn-check-slot" onclick="checkSingleSlot(${taskId}, ${si})">Check</button>
-      <button class="btn-confirm-slot" ${canConfirm ? '' : 'disabled'} onclick="confirmSlot(${taskId}, ${si})">Confirm</button>
-      <button class="btn-icon delete" style="padding:4px 8px" onclick="removeSlot(${taskId}, ${si})">✕</button>
-    </div>
-  `;
+  // Approvals — track per role: slot.approvals = { regina: true/false/null, assistant: true/false/null }
+  const approvals = slot.approvals || {};
+  const myRole = role === 'owner' ? 'regina' : 'assistant';
+  const otherRole = role === 'owner' ? 'assistant' : 'regina';
+  const otherLabel = role === 'owner' ? 'Kayla/Krista' : 'Regina';
+
+  const myVote = approvals[myRole];
+  const otherVote = approvals[otherRole];
+
+  const bothApproved = approvals.regina === true && approvals.assistant === true;
+  const isConfirmed = slot.confirmed === true;
+
+  // My vote buttons
+  const myApproveBtn = '<button class="vote-btn approve' + (myVote === true ? ' voted' : '') + '" onclick="voteSlot(' + taskId + ',' + si + ',true)">👍 Works</button>';
+  const myRejectBtn  = '<button class="vote-btn reject'  + (myVote === false ? ' voted' : '') + '" onclick="voteSlot(' + taskId + ',' + si + ',false)">✕ No</button>';
+
+  // Other party's status chip
+  let otherChip = '';
+  if (otherVote === true)  otherChip = '<span class="approval-chip chip-approved">' + otherLabel + ': ✓</span>';
+  else if (otherVote === false) otherChip = '<span class="approval-chip chip-rejected">' + otherLabel + ': ✕</span>';
+  else otherChip = '<span class="approval-chip chip-pending">' + otherLabel + ': pending</span>';
+
+  // Final confirm button — only show when both approved and not yet confirmed
+  const confirmBtn = bothApproved && !isConfirmed
+    ? '<button class="btn-confirm-slot" onclick="confirmSlot(' + taskId + ',' + si + ')">🗓 Confirm</button>'
+    : '';
+
+  const rowClass = isConfirmed ? 'slot-row final-confirmed' : bothApproved ? 'slot-row both-approved' : 'slot-row';
+
+  return '<div class="' + rowClass + '" id="slot-' + taskId + '-' + si + '">'
+    + '<div class="slot-datetime">' + dateStr + '<small>' + timeStr + '</small></div>'
+    + proposerLabel
+    + statusHtml
+    + '<button class="btn-check-slot" onclick="checkSingleSlot(' + taskId + ',' + si + ')">Check</button>'
+    + '<div class="slot-votes">' + myApproveBtn + myRejectBtn + '</div>'
+    + '<div class="slot-approval">' + otherChip + '</div>'
+    + confirmBtn
+    + (isConfirmed ? '' : '<button class="btn-icon delete" style="padding:4px 8px" onclick="removeSlot(' + taskId + ',' + si + ')">✕</button>')
+    + (isConfirmed ? '<div class="confirmed-banner" style="width:100%">🗓 Confirmed!</div>' : '')
+    + '</div>';
 }
 
 // Track avoided days per task
@@ -1310,7 +1424,7 @@ async function suggestTimes(taskId) {
   for (const dt of found) {
     const iso = dt.toISOString().slice(0,16);
     if (!existing.has(iso)) {
-      task.slots.push({ datetime: iso, status: 'free' });
+      task.slots.push({ datetime: iso, status: 'free', proposedBy: role === 'owner' ? 'regina' : 'assistant', approvals: {} });
       existing.add(iso);
       added++;
     }
@@ -1320,11 +1434,28 @@ async function suggestTimes(taskId) {
   toast(`Added ${added} suggested free slot${added !== 1 ? 's' : ''}! ✨`, 'success');
 }
 
+function voteSlot(taskId, si, approve) {
+  const task = tasks.find(t => t.id === taskId);
+  const slot = task.slots[si];
+  if (!slot.approvals) slot.approvals = {};
+  const myRole = role === 'owner' ? 'regina' : 'assistant';
+  // Toggle off if clicking same vote again
+  if (slot.approvals[myRole] === approve) {
+    slot.approvals[myRole] = null;
+  } else {
+    slot.approvals[myRole] = approve;
+  }
+  saveTasks();
+  renderTasks();
+  const bothApproved = slot.approvals.regina === true && slot.approvals.assistant === true;
+  if (bothApproved) toast('Both parties approved this slot! Click Confirm to finalize. 🎉', 'success');
+}
+
 function addSlot(taskId) {
   const input = document.getElementById('slot-input-' + taskId);
   if (!input.value) { toast('Select a date and time for the slot.', 'error'); return; }
   const task = tasks.find(t => t.id === taskId);
-  task.slots.push({ datetime: input.value, status: 'unchecked' });
+  task.slots.push({ datetime: input.value, status: 'unchecked', proposedBy: role === 'owner' ? 'regina' : 'assistant', approvals: {} });
   input.value = '';
   saveTasks();
   renderTasks();
@@ -1341,11 +1472,12 @@ function confirmSlot(taskId, si) {
   const task = tasks.find(t => t.id === taskId);
   const slot = task.slots[si];
   const dt = new Date(slot.datetime).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' });
+  slot.confirmed = true;
   task.status = 'scheduled';
   task.confirmedSlot = slot.datetime;
   saveTasks();
   renderTasks();
-  toast(`"${task.title}" scheduled for ${dt}`, 'success');
+  toast('"' + task.title + '" confirmed for ' + dt + ' 🎉', 'success');
 }
 
 // ────────────────────────────────────────────────
