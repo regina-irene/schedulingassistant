@@ -1013,7 +1013,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
@@ -1612,6 +1612,7 @@ function renderTaskCard(task) {
               <option value="3">3 suggestions</option>
               <option value="5" selected>5 suggestions</option>
               <option value="8">8 suggestions</option>
+              <option value="10">10 suggestions</option>
             </select>
           </div>
           <div>
@@ -1790,15 +1791,18 @@ async function suggestTimes(taskId) {
     return;
   }
 
-  // Check freeBusy in batches of 10 candidates at a time
+  // For long events (4h+), only suggest one slot per day
+  const longEvent = durationMs >= 4 * 3600000;
+
+  // Check availability in batches
   const found = [];
+  const foundDays = new Set(); // track days already used (for long events)
   let i = 0;
 
   while (found.length < count && i < candidates.length) {
     const batch = candidates.slice(i, i + 8);
     i += 8;
 
-    // Fetch events with title filtering for this batch window
     const batchMin = batch[0].toISOString();
     const batchMax = new Date(batch[batch.length-1].getTime() + durationMs).toISOString();
 
@@ -1806,7 +1810,6 @@ async function suggestTimes(taskId) {
       const busyIntervals = [];
       for (const cal of selectedCals) {
         if (cal.isRiePrivate) {
-          // Use freeBusy for private cals
           const resp = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
             method: 'POST',
             headers: { Authorization: 'Bearer ' + gToken, 'Content-Type': 'application/json' },
@@ -1816,7 +1819,6 @@ async function suggestTimes(taskId) {
           for (const b of (fb.calendars?.[cal.id]?.busy || []))
             busyIntervals.push({ start: new Date(b.start), end: new Date(b.end) });
         } else {
-          // Use Events API — filters out ignored titles automatically
           const events = await fetchEvents(cal.id, batchMin, batchMax);
           for (const e of events) busyIntervals.push({ start: e.start, end: e.end });
         }
@@ -1824,9 +1826,15 @@ async function suggestTimes(taskId) {
 
       for (const slot of batch) {
         if (found.length >= count) break;
+        const dayKey = slot.toISOString().slice(0, 10);
+        // For 4h+ events, skip if we already have a slot on this day
+        if (longEvent && foundDays.has(dayKey)) continue;
         const slotEnd = new Date(slot.getTime() + durationMs);
         const conflict = busyIntervals.some(b => slot < b.end && slotEnd > b.start);
-        if (!conflict) found.push(slot);
+        if (!conflict) {
+          found.push(slot);
+          foundDays.add(dayKey);
+        }
       }
     } catch(e) { break; }
   }
