@@ -539,6 +539,167 @@
   }
   .suggest-rules:focus { border-color: #4a90e2; }
 
+
+  /* ── CALENDAR VIEW ── */
+  .cal-view-wrap {
+    background: white;
+    border: 1px solid var(--rule);
+    border-radius: 14px;
+    border-top: 3px solid var(--accent-bright);
+    overflow: hidden;
+  }
+  .cal-view-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 1.2rem;
+    background: #e0f7fa;
+    border-bottom: 1px solid var(--rule);
+  }
+  .cal-view-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.1rem;
+    color: var(--ink);
+  }
+  .cal-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .cal-nav button {
+    background: white;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    color: var(--accent);
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+  .cal-nav button:hover { background: var(--accent); color: white; border-color: var(--accent); }
+  .cal-nav .month-label { font-weight: 600; font-size: 0.95rem; color: var(--ink); min-width: 130px; text-align: center; }
+  .cal-legend {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .cal-legend-item { display: flex; align-items: center; gap: 0.3rem; }
+  .cal-legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .cal-grid {
+    display: grid;
+    grid-template-columns: 60px repeat(7, 1fr);
+  }
+  .cal-day-header {
+    text-align: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--rule);
+    background: #f8fcff;
+  }
+  .cal-day-header.today { color: var(--accent); }
+  .cal-time-col {
+    font-size: 0.68rem;
+    color: var(--muted);
+    text-align: right;
+    padding: 0 6px 0 0;
+    line-height: 1;
+    position: relative;
+    background: #f8fcff;
+    border-right: 1px solid var(--rule);
+  }
+  .cal-time-label {
+    position: absolute;
+    top: -0.5em;
+    right: 6px;
+    font-size: 0.65rem;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .cal-cell {
+    border-right: 1px solid #e8f4fd;
+    border-bottom: 1px solid #e8f4fd;
+    position: relative;
+    min-height: 28px;
+  }
+  .cal-cell.weekend { background: #f8fcff; }
+  .cal-cell.today-col { background: #f0f9ff; }
+  .cal-hour-row { display: contents; }
+  .cal-event {
+    position: absolute;
+    left: 2px; right: 2px;
+    border-radius: 4px;
+    padding: 1px 4px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    z-index: 2;
+    cursor: default;
+  }
+  .cal-event.busy { background: #fed7d7; color: #822727; border-left: 3px solid #e53e3e; }
+  .cal-event.private-block { background: #e9d8fd; color: #553c9a; border-left: 3px solid #805ad5; }
+  .cal-event.proposed { background: #bfefff; color: #0077b6; border-left: 3px solid #00b4d8; }
+  .cal-event.proposed-free { background: #c6f6d5; color: #276749; border-left: 3px solid #38a169; }
+  .cal-event.confirmed { background: #bee3f8; color: #2a4365; border-left: 3px solid #3182ce; }
+  .cal-now-line {
+    position: absolute;
+    left: 0; right: 0;
+    height: 2px;
+    background: #e53e3e;
+    z-index: 10;
+    pointer-events: none;
+  }
+  .cal-now-line::before {
+    content: '';
+    position: absolute;
+    left: -4px; top: -4px;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #e53e3e;
+  }
+  .cal-scroll {
+    max-height: 420px;
+    overflow-y: auto;
+    position: relative;
+  }
+  .cal-view-toggle {
+    display: flex;
+    gap: 0.4rem;
+  }
+  .cal-view-btn {
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--rule);
+    background: white;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--muted);
+    transition: all 0.15s;
+  }
+  .cal-view-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .cal-fetch-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .cal-fetch-btn:hover { background: #023e8a; }
+
   /* ── CHECK ALL button ── */
   .toolbar {
     display: flex;
@@ -797,6 +958,36 @@
       <button class="btn-secondary" onclick="clearScheduled()">✓ Clear Scheduled</button>
     </div>
 
+
+    <!-- Calendar Availability View -->
+    <div class="cal-view-wrap" id="cal-view-wrap">
+      <div class="cal-view-header">
+        <div>
+          <div class="cal-view-title">📅 Availability Overview</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap">
+          <div class="cal-legend">
+            <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#e53e3e"></div>Busy</div>
+            <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#805ad5"></div>Private</div>
+            <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#00b4d8"></div>Proposed</div>
+            <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#38a169"></div>Free slot</div>
+            <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#3182ce"></div>Confirmed</div>
+          </div>
+          <div class="cal-nav">
+            <button onclick="calShift(-7)">&#8249; Prev</button>
+            <span class="month-label" id="cal-month-label">—</span>
+            <button onclick="calShift(7)">Next &#8250;</button>
+          </div>
+          <button class="cal-fetch-btn" onclick="fetchAndRenderCal()">🔄 Refresh</button>
+        </div>
+      </div>
+      <div id="cal-grid-container">
+        <div style="padding:1.2rem;text-align:center;color:var(--muted);font-size:0.88rem">
+          Connect Google Calendar and click 🔄 Refresh to load availability.
+        </div>
+      </div>
+    </div>
+
     <div id="tasks-container">
       <!-- tasks rendered here -->
       <div class="empty-state" id="empty-msg">
@@ -822,7 +1013,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
@@ -1087,6 +1278,193 @@ function togglePrivate(i) {
   toast(calendars[i].isRiePrivate
     ? `"${calendars[i].name}" marked RIE Private — hidden from Kayla/Krista.`
     : `"${calendars[i].name}" is now accessible to Kayla/Krista.`, 'info');
+}
+
+
+// ────────────────────────────────────────────────
+//  CALENDAR VIEW
+// ────────────────────────────────────────────────
+let calStartDate = null;  // Monday of displayed week
+let calBusyData = {};     // date string -> [{start, end, title, type}]
+const HOUR_HEIGHT = 28;   // px per hour slot
+const CAL_START_HOUR = 7;
+const CAL_END_HOUR = 21;
+
+function getWeekStart(d) {
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = day === 0 ? -6 : 1 - day; // Monday
+  date.setDate(date.getDate() + diff);
+  date.setHours(0,0,0,0);
+  return date;
+}
+
+function calShift(days) {
+  if (!calStartDate) calStartDate = getWeekStart(new Date());
+  calStartDate.setDate(calStartDate.getDate() + days);
+  renderCalView();
+}
+
+async function fetchAndRenderCal() {
+  if (!gToken) { toast('Connect Google Calendar first.', 'error'); return; }
+  if (!calStartDate) calStartDate = getWeekStart(new Date());
+
+  const container = document.getElementById('cal-grid-container');
+  container.innerHTML = '<div style="padding:1.2rem;text-align:center;color:var(--muted)"><span class="spin" style="border-color:rgba(0,119,182,0.3);border-top-color:#0077b6;width:20px;height:20px;display:inline-block"></span> Loading calendar...</div>';
+
+  const timeMin = new Date(calStartDate).toISOString();
+  const weekEnd = new Date(calStartDate);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+  const timeMax = weekEnd.toISOString();
+
+  const selectedCals = calendars.filter(c => c.selected && !(c.isRiePrivate && role === 'assistant'));
+  if (!selectedCals.length) { container.innerHTML = '<div style="padding:1.2rem;text-align:center;color:var(--muted)">No calendars selected.</div>'; return; }
+
+  try {
+    const resp = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + gToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ timeMin, timeMax, items: selectedCals.map(c => ({ id: c.id })) })
+    });
+    const data = await resp.json();
+    if (data.error) { toast('Calendar error: ' + data.error.message, 'error'); return; }
+
+    // Build busy blocks per day
+    calBusyData = {};
+    for (const cal of selectedCals) {
+      const busy = data.calendars[cal.id]?.busy || [];
+      for (const b of busy) {
+        const start = new Date(b.start);
+        const end = new Date(b.end);
+        const dateKey = start.toISOString().slice(0,10);
+        if (!calBusyData[dateKey]) calBusyData[dateKey] = [];
+        const isPrivate = cal.isRiePrivate;
+        calBusyData[dateKey].push({
+          start, end,
+          title: isPrivate ? 'Private' : cal.name,
+          type: isPrivate ? 'private-block' : 'busy'
+        });
+      }
+    }
+    renderCalView();
+  } catch(e) {
+    container.innerHTML = '<div style="padding:1.2rem;text-align:center;color:#e53e3e">Error loading calendar: ' + e.message + '</div>';
+  }
+}
+
+function renderCalView() {
+  if (!calStartDate) calStartDate = getWeekStart(new Date());
+  const container = document.getElementById('cal-grid-container');
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // Build 7-day columns
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(calStartDate);
+    d.setDate(d.getDate() + i);
+    days.push(d);
+  }
+
+  // Update month label
+  const firstDay = days[0], lastDay = days[6];
+  const monthLabel = document.getElementById('cal-month-label');
+  if (monthLabel) {
+    const fmt = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    monthLabel.textContent = fmt(firstDay) + ' – ' + fmt(lastDay);
+  }
+
+  // Collect proposed slots from tasks
+  const proposedSlots = [];
+  for (const task of tasks) {
+    for (const slot of task.slots) {
+      const start = new Date(slot.datetime);
+      const durationMs = parseDuration(task.duration);
+      const end = new Date(start.getTime() + durationMs);
+      const dateKey = start.toISOString().slice(0,10);
+      proposedSlots.push({ start, end, title: task.title, dateKey, status: slot.status, confirmed: slot.confirmed });
+    }
+  }
+
+  const totalHours = CAL_END_HOUR - CAL_START_HOUR;
+
+  let html = '<div class="cal-scroll"><div class="cal-grid" style="min-width:0">';
+
+  // Header row: empty time col + day headers
+  html += '<div class="cal-day-header" style="background:#f8fcff;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)"></div>';
+  for (const d of days) {
+    const isToday = d.getTime() === today.getTime();
+    const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+    const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+    const dayNum = d.getDate();
+    html += '<div class="cal-day-header' + (isToday ? ' today' : '') + '" style="' + (isWeekend ? 'background:#f0f8ff' : '') + '">'
+      + dayName + ' <span style="font-size:0.9rem;font-weight:700">' + dayNum + '</span></div>';
+  }
+
+  // Time rows
+  for (let h = CAL_START_HOUR; h < CAL_END_HOUR; h++) {
+    const label = h === 12 ? '12pm' : h > 12 ? (h-12) + 'pm' : h + 'am';
+    // Time label cell
+    html += '<div class="cal-time-col" style="height:' + HOUR_HEIGHT + 'px">'
+      + '<span class="cal-time-label">' + label + '</span></div>';
+
+    for (const d of days) {
+      const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+      const isToday = d.getTime() === today.getTime();
+      const dateKey = d.toISOString().slice(0,10);
+      html += '<div class="cal-cell' + (isWeekend ? ' weekend' : '') + (isToday ? ' today-col' : '') + '" style="height:' + HOUR_HEIGHT + 'px;position:relative">';
+
+      // Draw busy blocks that start in this hour
+      const busyForDay = calBusyData[dateKey] || [];
+      for (const b of busyForDay) {
+        const bStartH = b.start.getHours() + b.start.getMinutes()/60;
+        const bEndH   = b.end.getHours()   + b.end.getMinutes()/60;
+        if (Math.floor(bStartH) === h) {
+          const top    = (bStartH - h) * HOUR_HEIGHT;
+          const height = Math.min((bEndH - bStartH) * HOUR_HEIGHT, (CAL_END_HOUR - bStartH) * HOUR_HEIGHT);
+          html += '<div class="cal-event ' + b.type + '" style="top:' + top + 'px;height:' + Math.max(height,12) + 'px" title="' + b.title + '">' + b.title + '</div>';
+        }
+      }
+
+      // Draw proposed slots
+      for (const ps of proposedSlots) {
+        if (ps.dateKey !== dateKey) continue;
+        const psStartH = ps.start.getHours() + ps.start.getMinutes()/60;
+        const psEndH   = ps.end.getHours()   + ps.end.getMinutes()/60;
+        if (Math.floor(psStartH) === h) {
+          const top    = (psStartH - h) * HOUR_HEIGHT;
+          const height = Math.min((psEndH - psStartH) * HOUR_HEIGHT, (CAL_END_HOUR - psStartH) * HOUR_HEIGHT);
+          const evClass = ps.confirmed ? 'confirmed' : ps.status === 'free' ? 'proposed-free' : 'proposed';
+          html += '<div class="cal-event ' + evClass + '" style="top:' + top + 'px;height:' + Math.max(height,12) + 'px;left:30%;right:2px" title="' + esc(ps.title) + '">' + esc(ps.title) + '</div>';
+        }
+      }
+
+      // Now line
+      if (isToday && h === new Date().getHours()) {
+        const nowMin = new Date().getMinutes();
+        const nowTop = (nowMin / 60) * HOUR_HEIGHT;
+        html += '<div class="cal-now-line" style="top:' + nowTop + 'px"></div>';
+      }
+
+      html += '</div>';
+    }
+  }
+
+  html += '</div></div>';
+  container.innerHTML = html;
+
+  // Scroll to 8am on load
+  const scrollEl = container.querySelector('.cal-scroll');
+  if (scrollEl) scrollEl.scrollTop = (8 - CAL_START_HOUR) * HOUR_HEIGHT * 2;
+}
+
+function parseDuration(durStr) {
+  if (!durStr) return 3600000;
+  const s = durStr.toLowerCase();
+  const hr = s.match(/(\d+(?:\.\d+)?)\s*h/);
+  const mn = s.match(/(\d+)\s*m/);
+  if (hr) return parseFloat(hr[1]) * 3600000;
+  if (mn) return parseInt(mn[1]) * 60000;
+  return 3600000;
 }
 
 // ────────────────────────────────────────────────
@@ -1512,6 +1890,7 @@ async function checkAllSlots() {
   }
   saveTasks();
   renderTasks();
+  if (calBusyData && Object.keys(calBusyData).length) renderCalView();
   toast(`Checked ${count} slot(s) across all tasks.`, 'success');
 }
 
