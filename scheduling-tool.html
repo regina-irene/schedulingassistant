@@ -1013,7 +1013,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
@@ -1768,31 +1768,44 @@ async function suggestTimes(taskId) {
   // Build candidate slots within time window across date range
   const [startH, startM] = startT.split(':').map(Number);
   const [endH,   endM  ] = endT.split(':').map(Number);
-  const endMinutes = endH * 60 + endM;
-  const oncePerDay = interval >= 1440;
+  const startMinutes = startH * 60 + startM;
+  const endMinutes   = endH   * 60 + endM;
+  const durationMins = durationMs / 60000;
+  const oncePerDay   = interval >= 1440;
+  const now          = Date.now();
 
   const candidates = [];
-  const cursor = new Date(dateFrom);
-  while (cursor <= dateTo) {
-    if (!avoided.has(cursor.getDay())) {
+
+  // Iterate day by day using year/month/day integers to avoid mutation bugs
+  const fromY = dateFrom.getFullYear(), fromMo = dateFrom.getMonth(), fromD = dateFrom.getDate();
+  const toY   = dateTo.getFullYear(),   toMo   = dateTo.getMonth(),   toD   = dateTo.getDate();
+
+  let cur = new Date(fromY, fromMo, fromD);
+  const end = new Date(toY, toMo, toD);
+
+  while (cur <= end) {
+    const dayOfWeek = cur.getDay();
+    if (!avoided.has(dayOfWeek)) {
       if (oncePerDay) {
-        // Just one candidate per day at the preferred start time
-        const slotDate = new Date(cursor);
-        slotDate.setHours(startH, startM, 0, 0);
-        if (slotDate > new Date() && (startH * 60 + startM) + (durationMs / 60000) <= endMinutes) {
-          candidates.push(new Date(slotDate));
+        // One slot per day at the preferred start time
+        if (startMinutes + durationMins <= endMinutes) {
+          const slot = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate(), startH, startM, 0, 0);
+          if (slot.getTime() > now) candidates.push(slot);
         }
       } else {
-        let slotM = startH * 60 + startM;
-        while (slotM + (durationMs / 60000) <= endMinutes) {
-          const slotDate = new Date(cursor);
-          slotDate.setHours(Math.floor(slotM / 60), slotM % 60, 0, 0);
-          if (slotDate > new Date()) candidates.push(new Date(slotDate));
-          slotM += interval;
+        // Step through the day at the given interval
+        let m = startMinutes;
+        while (m + durationMins <= endMinutes) {
+          const h = Math.floor(m / 60);
+          const min = m % 60;
+          const slot = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate(), h, min, 0, 0);
+          if (slot.getTime() > now) candidates.push(slot);
+          m += interval;
         }
       }
     }
-    cursor.setDate(cursor.getDate() + 1);
+    // Advance to next day cleanly
+    cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 1);
   }
 
   if (!candidates.length) {
