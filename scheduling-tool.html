@@ -1013,7 +1013,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
@@ -1818,49 +1818,65 @@ async function suggestTimes(taskId) {
   // For long events (4h+), only suggest one slot per day
   const longEvent = durationMs >= 4 * 3600000;
 
-  // Check availability in batches
+  // Helper: local date key YYYY-MM-DD (avoids UTC offset issues)
+  function localDayKey(d) {
+    return d.getFullYear() + '-' +
+      String(d.getMonth()+1).padStart(2,'0') + '-' +
+      String(d.getDate()).padStart(2,'0');
+  }
+
+  // Fetch ALL busy intervals for the full date range upfront (one pass per calendar)
+  // This is more reliable than per-batch fetching
+  btn.innerHTML = '<span class="spin"></span> Fetching busy times…';
+  const allBusyIntervals = [];
+  try {
+    const rangeMin = new Date(dateFrom.getFullYear(), dateFrom.getMonth(), dateFrom.getDate(), 0, 0, 0).toISOString();
+    const rangeMax = new Date(dateTo.getFullYear(),   dateTo.getMonth(),   dateTo.getDate()+1, 0, 0, 0).toISOString();
+
+    for (const cal of selectedCals) {
+      if (cal.isRiePrivate) {
+        const resp = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + gToken, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ timeMin: rangeMin, timeMax: rangeMax, items: [{ id: cal.id }] }),
+        });
+        const fb = await resp.json();
+        for (const b of (fb.calendars?.[cal.id]?.busy || []))
+          allBusyIntervals.push({ start: new Date(b.start), end: new Date(b.end) });
+      } else {
+        const events = await fetchEvents(cal.id, rangeMin, rangeMax);
+        for (const e of events) allBusyIntervals.push({ start: e.start, end: e.end });
+      }
+    }
+  } catch(e) {
+    toast('Error fetching calendar data: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<span>✨</span> Suggest Available Times';
+    return;
+  }
+
+  btn.innerHTML = '<span class="spin"></span> Finding free slots…';
+
+  // Now check each candidate against the pre-fetched busy intervals
   const found = [];
-  const foundDays = new Set(); // track days already used (for long events)
-  let i = 0;
+  const foundDays = new Set();
 
-  while (found.length < count && i < candidates.length) {
-    const batch = candidates.slice(i, i + 8);
-    i += 8;
+  for (const slot of candidates) {
+    if (found.length >= count) break;
 
-    const batchMin = batch[0].toISOString();
-    const batchMax = new Date(batch[batch.length-1].getTime() + durationMs).toISOString();
+    // Local day key to avoid UTC offset issues
+    const dayKey = localDayKey(slot);
 
-    try {
-      const busyIntervals = [];
-      for (const cal of selectedCals) {
-        if (cal.isRiePrivate) {
-          const resp = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
-            method: 'POST',
-            headers: { Authorization: 'Bearer ' + gToken, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ timeMin: batchMin, timeMax: batchMax, items: [{ id: cal.id }] }),
-          });
-          const fb = await resp.json();
-          for (const b of (fb.calendars?.[cal.id]?.busy || []))
-            busyIntervals.push({ start: new Date(b.start), end: new Date(b.end) });
-        } else {
-          const events = await fetchEvents(cal.id, batchMin, batchMax);
-          for (const e of events) busyIntervals.push({ start: e.start, end: e.end });
-        }
-      }
+    // For 4h+ events, only one slot per day
+    if (longEvent && foundDays.has(dayKey)) continue;
 
-      for (const slot of batch) {
-        if (found.length >= count) break;
-        const dayKey = slot.toISOString().slice(0, 10);
-        // For 4h+ events, skip if we already have a slot on this day
-        if (longEvent && foundDays.has(dayKey)) continue;
-        const slotEnd = new Date(slot.getTime() + durationMs);
-        const conflict = busyIntervals.some(b => slot < b.end && slotEnd > b.start);
-        if (!conflict) {
-          found.push(slot);
-          foundDays.add(dayKey);
-        }
-      }
-    } catch(e) { break; }
+    const slotEnd = new Date(slot.getTime() + durationMs);
+    const conflict = allBusyIntervals.some(b => slot < b.end && slotEnd > b.start);
+
+    if (!conflict) {
+      found.push(slot);
+      foundDays.add(dayKey);
+    }
   }
 
   btn.disabled = false;
