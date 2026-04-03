@@ -952,6 +952,8 @@ function saveCalSettings() {
 
 let showAllCals = false;
 
+let showAllCals = false;
+
 function renderCalendarList() {
   const el = document.getElementById('calendar-list');
   if (!calendars.length) {
@@ -959,7 +961,6 @@ function renderCalendarList() {
     return;
   }
 
-  // Filter: remove RIE private from assistant, and if showAllCals is false only show selected
   let pool = role === 'assistant' ? calendars.filter(c => !c.isRiePrivate) : calendars;
   const allCount = pool.length;
   const selectedCount = pool.filter(c => c.selected).length;
@@ -990,7 +991,6 @@ function renderCalendarList() {
     + 'style="margin-top:0.4rem;background:none;border:none;font-size:0.75rem;color:var(--muted);cursor:pointer;padding:2px 0;text-align:left;font-family:inherit;">'
     + toggleLabel + '</button>';
 }
-
 function toggleCal(i) {
   if (calendars[i].isRiePrivate && role === 'assistant') return;
   calendars[i].selected = !calendars[i].selected;
