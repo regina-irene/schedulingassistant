@@ -720,7 +720,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
@@ -807,12 +807,14 @@ function applyRole(r) {
 let tokenClient;
 
 function initGSI() {
-  if (!CLIENT_ID) return;
+  console.log('initGSI called, CLIENT_ID present:', !!CLIENT_ID);
+  if (!CLIENT_ID) { console.error('No CLIENT_ID set!'); return; }
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
     scope: SCOPES,
     callback: handleToken,
   });
+  console.log('tokenClient initialized');
   // Auto-refresh if token is saved but expiring soon
   const savedToken = localStorage.getItem('sched_gtoken');
   const savedExpiry = parseInt(localStorage.getItem('sched_gtoken_expiry') || '0');
@@ -829,16 +831,29 @@ function silentRefresh() {
 }
 
 function connectGoogle() {
+  console.log('connectGoogle called, CLIENT_ID:', CLIENT_ID ? 'set' : 'MISSING');
   if (!CLIENT_ID) {
     toast('Add your Google OAuth Client ID to the script to connect.', 'error');
     return;
   }
+  if (!tokenClient) {
+    console.error('tokenClient not initialized — GSI script may not have loaded');
+    toast('Google Sign-In not ready yet. Please refresh the page.', 'error');
+    return;
+  }
+  console.log('Requesting access token...');
   tokenClient.requestAccessToken();
 }
 
 function handleToken(resp) {
-  if (resp.error) { toast('Auth failed: ' + resp.error, 'error'); return; }
+  console.log('handleToken called, resp:', JSON.stringify(resp).slice(0,200));
+  if (resp.error) { 
+    console.error('Token error:', resp.error, resp.error_description);
+    toast('Auth failed: ' + resp.error, 'error'); 
+    return; 
+  }
   gToken = resp.access_token;
+  console.log('Got token, fetching calendars...');
   // Save token with 55-minute expiry (tokens last 1hr, refresh slightly early)
   const expiry = Date.now() + 55 * 60 * 1000;
   localStorage.setItem('sched_gtoken', gToken);
