@@ -1013,7 +1013,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
@@ -1285,6 +1285,41 @@ function togglePrivate(i) {
 //  CALENDAR VIEW
 // ────────────────────────────────────────────────
 let calStartDate = null;  // Monday of displayed week
+
+// Titles to ignore when checking availability
+const IGNORED_TITLE_PATTERNS = [
+  /^krista out/i,
+  /^kayla working/i,
+  /^deadline/i,
+];
+
+function shouldIgnoreEvent(title) {
+  if (!title) return false;
+  return IGNORED_TITLE_PATTERNS.some(p => p.test(title.trim()));
+}
+
+// Fetch actual events (with titles) for a calendar and time range
+async function fetchEvents(calId, timeMin, timeMax) {
+  const url = new URL('https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calId) + '/events');
+  url.searchParams.set('timeMin', timeMin);
+  url.searchParams.set('timeMax', timeMax);
+  url.searchParams.set('singleEvents', 'true');
+  url.searchParams.set('orderBy', 'startTime');
+  url.searchParams.set('maxResults', '250');
+  const r = await fetch(url.toString(), { headers: { Authorization: 'Bearer ' + gToken } });
+  const d = await r.json();
+  if (d.error) return [];
+  return (d.items || []).filter(e => {
+    // Skip all-day events (no dateTime) and ignored titles
+    if (!e.start?.dateTime) return false;
+    if (shouldIgnoreEvent(e.summary)) return false;
+    return true;
+  }).map(e => ({
+    start: new Date(e.start.dateTime),
+    end:   new Date(e.end.dateTime),
+    title: e.summary || '(no title)',
+  }));
+}
 let calBusyData = {};     // date string -> [{start, end, title, type}]
 const HOUR_HEIGHT = 28;   // px per hour slot
 const CAL_START_HOUR = 7;
@@ -1321,32 +1356,37 @@ async function fetchAndRenderCal() {
   if (!selectedCals.length) { container.innerHTML = '<div style="padding:1.2rem;text-align:center;color:var(--muted)">No calendars selected.</div>'; return; }
 
   try {
-    const resp = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + gToken, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ timeMin, timeMax, items: selectedCals.map(c => ({ id: c.id })) })
-    });
-    const data = await resp.json();
-    if (data.error) { toast('Calendar error: ' + data.error.message, 'error'); return; }
-
-    // Build busy blocks per day
     calBusyData = {};
+    // Use Events API so we can filter by title
     for (const cal of selectedCals) {
-      const busy = data.calendars[cal.id]?.busy || [];
-      for (const b of busy) {
-        const start = new Date(b.start);
-        const end = new Date(b.end);
-        const dateKey = start.toISOString().slice(0,10);
-        if (!calBusyData[dateKey]) calBusyData[dateKey] = [];
-        const isPrivate = cal.isRiePrivate;
-        calBusyData[dateKey].push({
-          start, end,
-          title: isPrivate ? 'Private' : cal.name,
-          type: isPrivate ? 'private-block' : 'busy'
+      const events = cal.isRiePrivate
+        ? [] // for private cals, fall back to freeBusy so titles stay hidden
+        : await fetchEvents(cal.id, timeMin, timeMax);
+
+      if (cal.isRiePrivate) {
+        // Use freeBusy for private calendars (don't reveal titles)
+        const resp = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + gToken, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ timeMin, timeMax, items: [{ id: cal.id }] })
         });
+        const fb = await resp.json();
+        for (const b of (fb.calendars?.[cal.id]?.busy || [])) {
+          const start = new Date(b.start), end = new Date(b.end);
+          const dateKey = start.toISOString().slice(0,10);
+          if (!calBusyData[dateKey]) calBusyData[dateKey] = [];
+          calBusyData[dateKey].push({ start, end, title: 'Private', type: 'private-block' });
+        }
+      } else {
+        for (const e of events) {
+          const dateKey = e.start.toISOString().slice(0,10);
+          if (!calBusyData[dateKey]) calBusyData[dateKey] = [];
+          calBusyData[dateKey].push({ start: e.start, end: e.end, title: e.title, type: 'busy' });
+        }
       }
     }
     renderCalView();
+    toast('Calendar loaded — ignored entries starting with "Krista Out", "Kayla Working", or "DEADLINE".', 'info');
   } catch(e) {
     container.innerHTML = '<div style="padding:1.2rem;text-align:center;color:#e53e3e">Error loading calendar: ' + e.message + '</div>';
   }
@@ -1758,24 +1798,27 @@ async function suggestTimes(taskId) {
     const batch = candidates.slice(i, i + 8);
     i += 8;
 
-    // Single freeBusy call covering the whole batch window
+    // Fetch events with title filtering for this batch window
     const batchMin = batch[0].toISOString();
     const batchMax = new Date(batch[batch.length-1].getTime() + durationMs).toISOString();
 
     try {
-      const resp = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
-        method: 'POST',
-        headers: { Authorization: 'Bearer ' + gToken, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ timeMin: batchMin, timeMax: batchMax, items: selectedCals.map(c => ({ id: c.id })) }),
-      });
-      const data = await resp.json();
-      if (data.error) break;
-
-      // Collect all busy intervals across selected calendars
       const busyIntervals = [];
       for (const cal of selectedCals) {
-        for (const b of (data.calendars[cal.id]?.busy || [])) {
-          busyIntervals.push({ start: new Date(b.start), end: new Date(b.end) });
+        if (cal.isRiePrivate) {
+          // Use freeBusy for private cals
+          const resp = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
+            method: 'POST',
+            headers: { Authorization: 'Bearer ' + gToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ timeMin: batchMin, timeMax: batchMax, items: [{ id: cal.id }] }),
+          });
+          const fb = await resp.json();
+          for (const b of (fb.calendars?.[cal.id]?.busy || []))
+            busyIntervals.push({ start: new Date(b.start), end: new Date(b.end) });
+        } else {
+          // Use Events API — filters out ignored titles automatically
+          const events = await fetchEvents(cal.id, batchMin, batchMax);
+          for (const e of events) busyIntervals.push({ start: e.start, end: e.end });
         }
       }
 
@@ -1915,32 +1958,34 @@ async function checkSlotAvailability(task, slot) {
   const calItems = selectedCals.map(c => ({ id: c.id }));
 
   try {
-    const resp = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + gToken,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ timeMin, timeMax, items: calItems }),
-    });
-
-    const data = await resp.json();
-    if (data.error) { slot.status = 'unchecked'; return; }
-
     let busy = false;
     let busyCal = null;
-    let hasPrivate = false;
 
     for (const cal of selectedCals) {
-      const calBusy = data.calendars[cal.id]?.busy || [];
-      if (calBusy.length > 0) {
-        busy = true;
-        busyCal = cal.name;
+      if (cal.isRiePrivate) {
+        // Use freeBusy for private (don't expose titles)
+        const resp = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + gToken, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ timeMin, timeMax, items: [{ id: cal.id }] }),
+        });
+        const data = await resp.json();
+        if (!data.error && (data.calendars?.[cal.id]?.busy || []).length > 0) {
+          busy = true;
+          busyCal = role === 'owner' ? cal.name : 'Private calendar';
+        }
+      } else {
+        // Use Events API so we can filter out ignored titles
+        const events = await fetchEvents(cal.id, timeMin, timeMax);
+        // Check for overlap with slot window
+        const slotStart = new Date(timeMin), slotEnd = new Date(timeMax);
+        const conflict = events.some(e => slotStart < e.end && slotEnd > e.start);
+        if (conflict) { busy = true; busyCal = cal.name; }
       }
+      if (busy) break; // stop at first conflict
     }
 
     if (busy) { slot.status = 'busy'; slot.busyCalendar = busyCal; }
-    else if (hasPrivate) { slot.status = 'private'; slot.busyCalendar = null; }
     else { slot.status = 'free'; slot.busyCalendar = null; }
 
   } catch (e) {
