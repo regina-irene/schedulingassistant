@@ -372,6 +372,92 @@
   .btn-icon:hover { border-color: var(--accent); color: var(--accent); }
   .btn-icon.delete:hover { border-color: #e63946; color: #e63946; }
 
+
+  /* ── SUGGEST TIMES PANEL ── */
+  .suggest-panel {
+    border-top: 1px solid var(--rule);
+    background: #f0f8ff;
+    padding: 0.9rem 1.2rem;
+  }
+  .suggest-panel .slots-label { margin-bottom: 0.7rem; color: #2a6099; }
+  .suggest-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+  }
+  .suggest-grid input, .suggest-grid select {
+    padding: 7px 9px;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    background: white;
+    color: var(--ink);
+    width: 100%;
+    outline: none;
+  }
+  .suggest-grid input:focus, .suggest-grid select:focus { border-color: #4a90e2; }
+  .suggest-full { grid-column: 1 / -1; }
+  .day-toggles {
+    display: flex;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.6rem;
+  }
+  .day-btn {
+    padding: 4px 9px;
+    border-radius: 20px;
+    border: 1px solid var(--rule);
+    background: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .day-btn.avoided {
+    background: #ffd6d6;
+    border-color: #e63946;
+    color: #8b0000;
+    text-decoration: line-through;
+  }
+  .btn-suggest {
+    background: #2a6099;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.83rem;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+  }
+  .btn-suggest:hover { background: #1a4a7a; }
+  .btn-suggest:disabled { opacity: 0.5; cursor: default; }
+  .suggest-rules {
+    width: 100%;
+    padding: 7px 9px;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    background: white;
+    color: var(--ink);
+    resize: none;
+    outline: none;
+    min-height: 48px;
+    margin-bottom: 0.5rem;
+  }
+  .suggest-rules:focus { border-color: #4a90e2; }
+
   /* ── CHECK ALL button ── */
   .toolbar {
     display: flex;
@@ -634,7 +720,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
@@ -645,6 +731,25 @@ window.onload = () => {
   else applyRole(role);
   renderTasks();
   loadGoogleScript();
+  // Restore saved token if still valid
+  const savedToken = localStorage.getItem('sched_gtoken');
+  const savedExpiry = parseInt(localStorage.getItem('sched_gtoken_expiry') || '0');
+  if (savedToken && Date.now() < savedExpiry) {
+    gToken = savedToken;
+    document.getElementById('gcal-status').textContent = '✅ Connected';
+    document.getElementById('gcal-status').style.color = 'var(--confirm)';
+    document.getElementById('connect-btn').textContent = '✅ Calendar Connected';
+    // Restore calendars from saved settings
+    const saved = JSON.parse(localStorage.getItem('sched_cals') || '{}');
+    if (Object.keys(saved).length) {
+      calendars = Object.entries(saved).map(([id, v]) => ({
+        id, name: v.name || id, color: v.color || '#4a90e2',
+        selected: v.selected !== undefined ? v.selected : true,
+        isRiePrivate: v.isRiePrivate || false,
+      }));
+      renderCalendarList();
+    }
+  }
 };
 
 function loadGoogleScript() {
@@ -708,6 +813,19 @@ function initGSI() {
     scope: SCOPES,
     callback: handleToken,
   });
+  // Auto-refresh if token is saved but expiring soon
+  const savedToken = localStorage.getItem('sched_gtoken');
+  const savedExpiry = parseInt(localStorage.getItem('sched_gtoken_expiry') || '0');
+  if (savedToken && Date.now() < savedExpiry) {
+    // Still valid — schedule a silent refresh 5 min before expiry
+    const msUntilRefresh = Math.max(0, savedExpiry - Date.now() - 5 * 60 * 1000);
+    setTimeout(() => silentRefresh(), msUntilRefresh);
+  }
+}
+
+function silentRefresh() {
+  if (!tokenClient) return;
+  tokenClient.requestAccessToken({ prompt: 'none' });
 }
 
 function connectGoogle() {
@@ -721,8 +839,13 @@ function connectGoogle() {
 function handleToken(resp) {
   if (resp.error) { toast('Auth failed: ' + resp.error, 'error'); return; }
   gToken = resp.access_token;
+  // Save token with 55-minute expiry (tokens last 1hr, refresh slightly early)
+  const expiry = Date.now() + 55 * 60 * 1000;
+  localStorage.setItem('sched_gtoken', gToken);
+  localStorage.setItem('sched_gtoken_expiry', expiry.toString());
   document.getElementById('gcal-status').textContent = '✅ Connected';
   document.getElementById('gcal-status').style.color = 'var(--confirm)';
+  document.getElementById('connect-btn').textContent = '✅ Calendar Connected';
   toast('Google Calendar connected!', 'success');
   fetchCalendars();
 }
@@ -751,7 +874,7 @@ async function fetchCalendars() {
 
 function saveCalSettings() {
   const obj = {};
-  calendars.forEach(c => { obj[c.id] = { selected: c.selected, isRiePrivate: c.isRiePrivate }; });
+  calendars.forEach(c => { obj[c.id] = { selected: c.selected, isRiePrivate: c.isRiePrivate, name: c.name, color: c.color }; });
   localStorage.setItem('sched_cals', JSON.stringify(obj));
 }
 
@@ -871,10 +994,63 @@ function renderTaskCard(task) {
         </div>
       </div>
 
+      <div class="suggest-panel">
+        <div class="slots-label">✨ Smart Suggest Times</div>
+        <div class="suggest-grid">
+          <div>
+            <label style="font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px">Date Range From</label>
+            <input type="date" id="suggest-from-${task.id}" />
+          </div>
+          <div>
+            <label style="font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px">Date Range To</label>
+            <input type="date" id="suggest-to-${task.id}" />
+          </div>
+          <div>
+            <label style="font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px">Earliest Time</label>
+            <input type="time" id="suggest-start-${task.id}" value="09:00" />
+          </div>
+          <div>
+            <label style="font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px">Latest End Time</label>
+            <input type="time" id="suggest-end-${task.id}" value="17:00" />
+          </div>
+          <div>
+            <label style="font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px">How Many Options</label>
+            <select id="suggest-count-${task.id}">
+              <option value="3">3 suggestions</option>
+              <option value="5" selected>5 suggestions</option>
+              <option value="8">8 suggestions</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px">Interval</label>
+            <select id="suggest-interval-${task.id}">
+              <option value="30">Every 30 min</option>
+              <option value="60" selected>Every 1 hour</option>
+              <option value="120">Every 2 hours</option>
+            </select>
+          </div>
+        </div>
+        <label style="font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px">Avoid Days</label>
+        <div class="day-toggles" id="avoid-days-${task.id}">
+          <span class="day-btn" data-day="0" onclick="toggleAvoidDay(${task.id},0)">Sun</span>
+          <span class="day-btn" data-day="1" onclick="toggleAvoidDay(${task.id},1)">Mon</span>
+          <span class="day-btn" data-day="2" onclick="toggleAvoidDay(${task.id},2)">Tue</span>
+          <span class="day-btn" data-day="3" onclick="toggleAvoidDay(${task.id},3)">Wed</span>
+          <span class="day-btn" data-day="4" onclick="toggleAvoidDay(${task.id},4)">Thu</span>
+          <span class="day-btn" data-day="5" onclick="toggleAvoidDay(${task.id},5)">Fri</span>
+          <span class="day-btn" data-day="6" onclick="toggleAvoidDay(${task.id},6)">Sat</span>
+        </div>
+        <label style="font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px;margin-top:0.4rem">Other Rules / Notes</label>
+        <textarea class="suggest-rules" id="suggest-rules-${task.id}" placeholder="e.g. Prefer mornings, avoid lunch hour, no back-to-back meetings…" rows="2"></textarea>
+        <button class="btn-suggest" onclick="suggestTimes(${task.id})" id="suggest-btn-${task.id}">
+          <span>✨</span> Suggest Available Times
+        </button>
+      </div>
+
       <div class="time-slots">
         <div class="slots-label">Proposed Time Slots</div>
         <div class="slots-grid" id="slots-${task.id}">
-          ${slotsHtml || '<div style="font-size:0.82rem;color:var(--muted)">No time slots yet — add one below.</div>'}
+          ${slotsHtml || '<div style="font-size:0.82rem;color:var(--muted)">No time slots yet — use Suggest above or add manually below.</div>'}
         </div>
         <div class="add-slot-row">
           <input type="datetime-local" id="slot-input-${task.id}" />
@@ -883,7 +1059,7 @@ function renderTaskCard(task) {
       </div>
 
       <div class="task-actions">
-        <button class="btn-icon" onclick="checkTaskSlots(${task.id})">🔍 Check</button>
+        <button class="btn-icon" onclick="checkTaskSlots(${task.id})">🔍 Check All</button>
         <button class="btn-icon delete" onclick="deleteTask(${task.id})">🗑 Remove</button>
       </div>
     </div>
@@ -914,6 +1090,140 @@ function renderSlotRow(taskId, slot, si) {
       <button class="btn-icon delete" style="padding:4px 8px" onclick="removeSlot(${taskId}, ${si})">✕</button>
     </div>
   `;
+}
+
+// Track avoided days per task
+const avoidedDays = {}; // taskId -> Set of day numbers
+
+function toggleAvoidDay(taskId, day) {
+  if (!avoidedDays[taskId]) avoidedDays[taskId] = new Set();
+  const set = avoidedDays[taskId];
+  if (set.has(day)) set.delete(day);
+  else set.add(day);
+  // Update button style
+  const btn = document.querySelector(`#avoid-days-${taskId} [data-day="${day}"]`);
+  if (btn) btn.classList.toggle('avoided', set.has(day));
+}
+
+async function suggestTimes(taskId) {
+  if (!gToken) { toast('Connect Google Calendar first to suggest times.', 'error'); return; }
+
+  const task = tasks.find(t => t.id === taskId);
+  const fromVal = document.getElementById('suggest-from-' + taskId)?.value;
+  const toVal   = document.getElementById('suggest-to-'   + taskId)?.value;
+  const startT  = document.getElementById('suggest-start-' + taskId)?.value || '09:00';
+  const endT    = document.getElementById('suggest-end-'   + taskId)?.value || '17:00';
+  const count   = parseInt(document.getElementById('suggest-count-'    + taskId)?.value || '5');
+  const interval= parseInt(document.getElementById('suggest-interval-' + taskId)?.value || '60');
+
+  if (!fromVal || !toVal) { toast('Please set a date range first.', 'error'); return; }
+
+  const dateFrom = new Date(fromVal + 'T00:00:00');
+  const dateTo   = new Date(toVal   + 'T23:59:59');
+  if (dateFrom > dateTo) { toast('Start date must be before end date.', 'error'); return; }
+
+  // Duration in ms
+  let durationMs = 60 * 60 * 1000;
+  const durText = (task.duration || '').toLowerCase();
+  const hrMatch = durText.match(/(\d+(?:\.\d+)?)\s*h/);
+  const minMatch = durText.match(/(\d+)\s*m/);
+  if (hrMatch) durationMs = parseFloat(hrMatch[1]) * 3600000;
+  else if (minMatch) durationMs = parseInt(minMatch[1]) * 60000;
+
+  const avoided = avoidedDays[taskId] || new Set();
+  const selectedCals = calendars.filter(c => c.selected && !(c.isRiePrivate && role === 'assistant'));
+
+  const btn = document.getElementById('suggest-btn-' + taskId);
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Checking availability…';
+
+  // Build candidate slots: every `interval` minutes within time window across date range
+  const [startH, startM] = startT.split(':').map(Number);
+  const [endH,   endM  ] = endT.split(':').map(Number);
+  const endMinutes = endH * 60 + endM;
+
+  const candidates = [];
+  const cursor = new Date(dateFrom);
+  while (cursor <= dateTo) {
+    if (!avoided.has(cursor.getDay())) {
+      let slotM = startH * 60 + startM;
+      while (slotM + (durationMs / 60000) <= endMinutes) {
+        const slotDate = new Date(cursor);
+        slotDate.setHours(Math.floor(slotM / 60), slotM % 60, 0, 0);
+        if (slotDate > new Date()) candidates.push(new Date(slotDate));
+        slotM += interval;
+      }
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  if (!candidates.length) {
+    toast('No candidate slots in that range. Try widening your date or time window.', 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<span>✨</span> Suggest Available Times';
+    return;
+  }
+
+  // Check freeBusy in batches of 10 candidates at a time
+  const found = [];
+  let i = 0;
+
+  while (found.length < count && i < candidates.length) {
+    const batch = candidates.slice(i, i + 8);
+    i += 8;
+
+    // Single freeBusy call covering the whole batch window
+    const batchMin = batch[0].toISOString();
+    const batchMax = new Date(batch[batch.length-1].getTime() + durationMs).toISOString();
+
+    try {
+      const resp = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + gToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timeMin: batchMin, timeMax: batchMax, items: selectedCals.map(c => ({ id: c.id })) }),
+      });
+      const data = await resp.json();
+      if (data.error) break;
+
+      // Collect all busy intervals across selected calendars
+      const busyIntervals = [];
+      for (const cal of selectedCals) {
+        for (const b of (data.calendars[cal.id]?.busy || [])) {
+          busyIntervals.push({ start: new Date(b.start), end: new Date(b.end) });
+        }
+      }
+
+      for (const slot of batch) {
+        if (found.length >= count) break;
+        const slotEnd = new Date(slot.getTime() + durationMs);
+        const conflict = busyIntervals.some(b => slot < b.end && slotEnd > b.start);
+        if (!conflict) found.push(slot);
+      }
+    } catch(e) { break; }
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<span>✨</span> Suggest Available Times';
+
+  if (!found.length) {
+    toast('No free slots found in that range. Try a wider date range or different times.', 'error');
+    return;
+  }
+
+  // Add found slots to task (avoid duplicates)
+  const existing = new Set(task.slots.map(s => s.datetime));
+  let added = 0;
+  for (const dt of found) {
+    const iso = dt.toISOString().slice(0,16);
+    if (!existing.has(iso)) {
+      task.slots.push({ datetime: iso, status: 'free' });
+      existing.add(iso);
+      added++;
+    }
+  }
+  saveTasks();
+  renderTasks();
+  toast(`Added ${added} suggested free slot${added !== 1 ? 's' : ''}! ✨`, 'success');
 }
 
 function addSlot(taskId) {
