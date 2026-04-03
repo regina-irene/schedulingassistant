@@ -951,6 +951,88 @@
   }
   .btn-open-mail:hover { background: #0096c7; }
 
+
+  /* ── BRANCHING ADD TASK FORM ── */
+  .task-type-choice {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .task-type-btn {
+    padding: 10px 8px;
+    border-radius: 8px;
+    border: 2px solid var(--rule);
+    background: white;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .task-type-btn:hover { border-color: #00b4d8; }
+  .task-type-btn.active { border-color: #0077b6; background: #e0f7fa; }
+  .task-type-btn .type-icon { font-size: 1.3rem; display: block; margin-bottom: 4px; }
+  .task-type-btn .type-label { font-size: 0.78rem; font-weight: 600; color: var(--ink); display: block; }
+  .task-type-btn .type-sub { font-size: 0.68rem; color: var(--muted); display: block; margin-top: 2px; line-height: 1.3; }
+  .form-branch { display: none; flex-direction: column; gap: 0.6rem; }
+  .form-branch.active { display: flex; }
+  .proposed-slot-entry {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    background: #f0f9ff;
+    border: 1px solid #b3d4e8;
+    border-radius: 8px;
+    padding: 0.6rem;
+    margin-bottom: 0.3rem;
+  }
+  .proposed-slot-entry input {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    background: white;
+    color: var(--ink);
+    outline: none;
+  }
+  .proposed-slot-entry input:focus { border-color: #00b4d8; }
+  .btn-add-proposed-slot {
+    background: none;
+    border: 1px dashed #0077b6;
+    color: #0077b6;
+    padding: 6px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .btn-add-proposed-slot:hover { background: #e0f7fa; }
+  .btn-remove-slot-entry {
+    background: none;
+    border: none;
+    color: #e63946;
+    font-size: 0.75rem;
+    cursor: pointer;
+    padding: 0;
+    text-align: right;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .form-divider {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #0077b6;
+    border-top: 1px solid #b3d4e8;
+    padding-top: 0.5rem;
+    margin-top: 0.2rem;
+  }
+
   /* ── CHECK ALL button ── */
   .toolbar {
     display: flex;
@@ -1157,37 +1239,85 @@
     <div>
       <div class="section-label">Add Scheduling Task</div>
       <div class="add-form">
+
+        <!-- Step 1: shared fields -->
         <input type="text" id="new-title" placeholder="Task title *" />
-        <textarea id="new-desc" placeholder="Description / notes"></textarea>
+        <textarea id="new-desc" placeholder="Description / notes" style="min-height:48px"></textarea>
         <select id="new-priority">
           <option value="medium">Priority: Medium</option>
           <option value="high">Priority: High</option>
           <option value="low">Priority: Low</option>
         </select>
-        <input type="text" id="new-duration" placeholder="Duration (e.g. 1 hour, 30 min)" />
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem">
-          <div>
-            <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px">Date From</label>
-            <input type="date" id="new-date-from" />
+
+        <!-- Step 2: branch question -->
+        <div class="form-divider">Do you have proposed dates?</div>
+        <div class="task-type-choice">
+          <div class="task-type-btn active" id="type-btn-find" onclick="setTaskType('find')">
+            <span class="type-icon">🔍</span>
+            <span class="type-label">No — Find Times</span>
+            <span class="type-sub">I need to find available slots</span>
           </div>
-          <div>
-            <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px">Date To</label>
-            <input type="date" id="new-date-to" />
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem">
-          <div>
-            <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px">Schedule After</label>
-            <input type="time" id="new-pref-start" value="09:00" />
-          </div>
-          <div>
-            <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px">Must End By</label>
-            <input type="time" id="new-pref-end" value="17:00" />
+          <div class="task-type-btn" id="type-btn-check" onclick="setTaskType('check')">
+            <span class="type-icon">📋</span>
+            <span class="type-label">Yes — Check Times</span>
+            <span class="type-sub">3rd party sent proposed times</span>
           </div>
         </div>
-        <input type="date" id="new-deadline" title="Must schedule by (deadline)" placeholder="Deadline (optional)" />
-        <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">↑ Deadline (optional)</label>
-        <button class="btn-add" onclick="addTask()">+ Add Task</button>
+
+        <!-- Branch A: Find Times (existing flow) -->
+        <div class="form-branch active" id="branch-find">
+          <input type="text" id="new-duration" placeholder="Duration (e.g. 1 hour, 30 min)" />
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem">
+            <div>
+              <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px">Date From</label>
+              <input type="date" id="new-date-from" />
+            </div>
+            <div>
+              <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px">Date To</label>
+              <input type="date" id="new-date-to" />
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem">
+            <div>
+              <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px">Schedule After</label>
+              <input type="time" id="new-pref-start" value="09:00" />
+            </div>
+            <div>
+              <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px">Must End By</label>
+              <input type="time" id="new-pref-end" value="17:00" />
+            </div>
+          </div>
+          <div>
+            <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px">Deadline (optional)</label>
+            <input type="date" id="new-deadline" />
+          </div>
+        </div>
+
+        <!-- Branch B: Check 3rd-Party Proposed Times -->
+        <div class="form-branch" id="branch-check">
+          <div class="form-divider">Enter proposed times</div>
+          <div id="proposed-slots-container">
+            <div class="proposed-slot-entry" id="pse-0">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:0.72rem;font-weight:600;color:#0077b6">Option 1</span>
+                <button class="btn-remove-slot-entry" onclick="removeProposedEntry(0)" style="display:none">✕ Remove</button>
+              </div>
+              <input type="text" placeholder="e.g. Monday April 6 at 2pm or Apr 6, 2:00 PM" id="pse-text-0" />
+            </div>
+          </div>
+          <button class="btn-add-proposed-slot" onclick="addProposedEntry()">+ Add another proposed time</button>
+          <div class="form-divider">Check my availability</div>
+          <input type="text" id="new-duration-check" placeholder="Duration (e.g. 1 hour, 30 min)" />
+          <div>
+            <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px">Must decide by</label>
+            <input type="date" id="new-deadline-check" />
+          </div>
+          <div style="font-size:0.75rem;color:var(--muted);background:#e0f7fa;border-radius:6px;padding:6px 10px;line-height:1.5">
+            💡 Times will be checked against your calendar. Available options will be presented for your approval — conflicting ones will be flagged.
+          </div>
+        </div>
+
+        <button class="btn-add" id="add-task-btn" onclick="addTask()">+ Add Task</button>
       </div>
     </div>
 
@@ -1198,7 +1328,7 @@
 
     <div>
       <div class="page-title">Scheduling <span>Tasks</span></div>
-      <div class="subtitle">Propose time slots and check availability across selected calendars.</div>
+      <div class="subtitle">Propose time slots, check availability, and manage approvals.</div>
     </div>
 
     <!-- Confirmed Appointments Panel -->
@@ -1306,7 +1436,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
@@ -1981,34 +2111,158 @@ function openMailto() {
 // ────────────────────────────────────────────────
 function saveTasks() { localStorage.setItem('sched_tasks', JSON.stringify(tasks)); }
 
+let currentTaskType = 'find';
+let proposedEntryCount = 1;
+
+function setTaskType(type) {
+  currentTaskType = type;
+  document.getElementById('type-btn-find').classList.toggle('active', type === 'find');
+  document.getElementById('type-btn-check').classList.toggle('active', type === 'check');
+  document.getElementById('branch-find').classList.toggle('active', type === 'find');
+  document.getElementById('branch-check').classList.toggle('active', type === 'check');
+  document.getElementById('add-task-btn').textContent = type === 'check' ? '+ Add & Check Availability' : '+ Add Task';
+}
+
+function addProposedEntry() {
+  const container = document.getElementById('proposed-slots-container');
+  const idx = proposedEntryCount++;
+  const div = document.createElement('div');
+  div.className = 'proposed-slot-entry';
+  div.id = 'pse-' + idx;
+  div.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center">'
+    + '<span style="font-size:0.72rem;font-weight:600;color:#0077b6">Option ' + (idx+1) + '</span>'
+    + '<button class="btn-remove-slot-entry" onclick="removeProposedEntry(' + idx + ')">✕ Remove</button>'
+    + '</div>'
+    + '<input type="text" placeholder="e.g. Monday April 6 at 2pm" id="pse-text-' + idx + '" />';
+  container.appendChild(div);
+  // Show remove buttons now there are multiple
+  container.querySelectorAll('.btn-remove-slot-entry').forEach(b => b.style.display = 'block');
+}
+
+function removeProposedEntry(idx) {
+  const el = document.getElementById('pse-' + idx);
+  if (el) el.remove();
+  const container = document.getElementById('proposed-slots-container');
+  if (container.querySelectorAll('.proposed-slot-entry').length <= 1) {
+    container.querySelectorAll('.btn-remove-slot-entry').forEach(b => b.style.display = 'none');
+  }
+}
+
+// Parse a free-text date/time string into a datetime-local value
+function parseProposedDateTime(text) {
+  if (!text.trim()) return null;
+  const d = new Date(text);
+  if (!isNaN(d.getTime())) {
+    const pad = n => String(n).padStart(2,'0');
+    return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate())
+      + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+  return null; // unparseable — store as text
+}
+
 function addTask() {
   const title = document.getElementById('new-title').value.trim();
   if (!title) { toast('Task title is required.', 'error'); return; }
 
-  const task = {
-    id: Date.now(),
-    title,
-    desc: document.getElementById('new-desc').value.trim(),
-    priority: document.getElementById('new-priority').value,
-    duration: document.getElementById('new-duration').value.trim(),
-    dateFrom: document.getElementById('new-date-from').value,
-    dateTo: document.getElementById('new-date-to').value,
-    prefStart: document.getElementById('new-pref-start').value || '09:00',
-    prefEnd: document.getElementById('new-pref-end').value || '17:00',
-    deadline: document.getElementById('new-deadline').value,
-    status: 'pending',
-    slots: [],
-  };
-  tasks.push(task);
-  saveTasks();
-  renderTasks();
+  if (currentTaskType === 'check') {
+    // ── Branch B: 3rd-party proposed times ──
+    const duration = document.getElementById('new-duration-check').value.trim();
+    const deadline = document.getElementById('new-deadline-check').value;
 
-  // Reset form
-  ['new-title','new-desc','new-duration','new-date-from','new-date-to','new-deadline'].forEach(id => document.getElementById(id).value = '');
+    // Collect all proposed slot text entries
+    const container = document.getElementById('proposed-slots-container');
+    const entries = container.querySelectorAll('.proposed-slot-entry input[type=text]');
+    const rawSlots = [];
+    entries.forEach(inp => { if (inp.value.trim()) rawSlots.push(inp.value.trim()); });
+
+    if (!rawSlots.length) { toast('Please enter at least one proposed time.', 'error'); return; }
+
+    const task = {
+      id: Date.now(),
+      title,
+      desc: document.getElementById('new-desc').value.trim(),
+      priority: document.getElementById('new-priority').value,
+      duration,
+      deadline,
+      taskType: 'check', // mark as 3rd-party check type
+      status: 'pending',
+      slots: [],
+    };
+
+    // Convert text entries to slots — try to parse, fall back to storing raw text
+    for (const raw of rawSlots) {
+      const parsed = parseProposedDateTime(raw);
+      task.slots.push({
+        datetime: parsed || '',
+        rawText: raw,
+        status: parsed ? 'unchecked' : 'unparsed',
+        proposedBy: 'external',
+        approvals: {},
+      });
+    }
+
+    tasks.push(task);
+    saveTasks();
+    renderTasks();
+    renderConfirmedPanel();
+
+    // Auto-check availability if we have a token and parseable slots
+    const parseable = task.slots.filter(s => s.datetime);
+    if (gToken && parseable.length) {
+      toast('Task added! Checking availability against your calendar…', 'info');
+      setTimeout(() => checkTaskSlots(task.id), 300);
+    } else if (!gToken) {
+      toast('Task added! Connect Google Calendar to check availability.', 'info');
+    } else {
+      toast('Task added! Some times could not be parsed — please check them manually.', 'info');
+    }
+
+    // Reset branch B
+    document.getElementById('proposed-slots-container').innerHTML =
+      '<div class="proposed-slot-entry" id="pse-0">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center">'
+      + '<span style="font-size:0.72rem;font-weight:600;color:#0077b6">Option 1</span>'
+      + '<button class="btn-remove-slot-entry" onclick="removeProposedEntry(0)" style="display:none">✕ Remove</button>'
+      + '</div>'
+      + '<input type="text" placeholder="e.g. Monday April 6 at 2pm or Apr 6, 2:00 PM" id="pse-text-0" />'
+      + '</div>';
+    proposedEntryCount = 1;
+    document.getElementById('new-duration-check').value = '';
+    document.getElementById('new-deadline-check').value = '';
+
+  } else {
+    // ── Branch A: Find Times (original flow) ──
+    const task = {
+      id: Date.now(),
+      title,
+      desc: document.getElementById('new-desc').value.trim(),
+      priority: document.getElementById('new-priority').value,
+      duration: document.getElementById('new-duration').value.trim(),
+      dateFrom: document.getElementById('new-date-from').value,
+      dateTo: document.getElementById('new-date-to').value,
+      prefStart: document.getElementById('new-pref-start').value || '09:00',
+      prefEnd: document.getElementById('new-pref-end').value || '17:00',
+      deadline: document.getElementById('new-deadline').value,
+      taskType: 'find',
+      status: 'pending',
+      slots: [],
+    };
+    tasks.push(task);
+    saveTasks();
+    renderTasks();
+    renderConfirmedPanel();
+
+    ['new-title','new-desc','new-duration','new-date-from','new-date-to','new-deadline'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('new-priority').value = 'medium';
+    document.getElementById('new-pref-start').value = '09:00';
+    document.getElementById('new-pref-end').value = '17:00';
+    toast('Task added! Use ✨ Suggest Times to find availability.', 'success');
+  }
+
+  // Reset shared fields
+  document.getElementById('new-title').value = '';
+  document.getElementById('new-desc').value = '';
   document.getElementById('new-priority').value = 'medium';
-  document.getElementById('new-pref-start').value = '09:00';
-  document.getElementById('new-pref-end').value = '17:00';
-  toast('Task added! Use ✨ Suggest Times to find availability.', 'success');
 }
 
 function deleteTask(id) {
@@ -2134,6 +2388,22 @@ function renderSlotRow(taskId, slot, si) {
   const dt = new Date(slot.datetime);
   const dateStr = dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   const timeStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+  // Handle unparsed slots
+  if (slot.status === 'unparsed') {
+    return '<div class="slot-row" style="flex-direction:column;align-items:flex-start;gap:4px" id="slot-' + taskId + '-' + si + '">'
+      + '<div style="display:flex;align-items:center;gap:0.5rem;width:100%">'
+      + '<span style="font-size:0.82rem;color:var(--ink);font-weight:500">📋 ' + esc(slot.rawText || slot.datetime) + '</span>'
+      + '<span class="slot-status" style="background:#fff3cd;color:#7c5a00;margin-left:auto">⚠ Needs date</span>'
+      + '<button class="btn-icon delete" style="padding:4px 8px" onclick="removeSlot(' + taskId + ',' + si + ')">✕</button>'
+      + '</div>'
+      + '<div style="display:flex;gap:0.4rem;align-items:center;width:100%">'
+      + '<input type="datetime-local" style="flex:1;padding:4px 8px;border:1px solid var(--rule);border-radius:6px;font-size:0.8rem;font-family:inherit" '
+      + 'onchange="fixUnparsedSlot(' + taskId + ',' + si + ',this.value)" />'
+      + '<span style="font-size:0.72rem;color:var(--muted)">Set date to check</span>'
+      + '</div>'
+      + '</div>';
+  }
 
   // Availability status
   let statusHtml = '<span class="slot-status status-checking">—</span>';
@@ -2461,6 +2731,16 @@ function addSlot(taskId) {
   input.value = '';
   saveTasks();
   renderTasks();
+}
+
+function fixUnparsedSlot(taskId, si, datetime) {
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return;
+  task.slots[si].datetime = datetime;
+  task.slots[si].status = 'unchecked';
+  saveTasks();
+  renderTasks();
+  toast('Date set! Click Check to verify availability.', 'success');
 }
 
 function removeSlot(taskId, si) {
