@@ -1714,7 +1714,7 @@
     <div class="notify-footer">
       <button class="btn-secondary" onclick="closeNotifyModal()">Cancel</button>
       <button class="btn-copy-email" onclick="copyNotifyEmail()">📋 Copy</button>
-      <button class="btn-open-mail" onclick="openNotifyMailto()">✉️ Open in Mail</button>
+      <button class="btn-open-mail" onclick="openNotifyMailto()">✉️ Open in Front</button>
     </div>
   </div>
 </div>
@@ -1732,7 +1732,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
@@ -2130,11 +2130,11 @@ function copyNotifyEmail() {
 
 function openNotifyMailto() {
   const { subject, body } = buildNotifyEmail();
-  const email = document.getElementById('notify-email').value.trim();
-  const mailto = 'mailto:' + encodeURIComponent(email)
+  // Open Front app team inbox with subject and body pre-filled
+  const frontUrl = 'https://app.frontapp.com/inboxes/teams/folders/'
     + '?subject=' + encodeURIComponent(subject)
     + '&body=' + encodeURIComponent(body);
-  window.location.href = mailto;
+  window.open(frontUrl, '_blank');
 }
 
 // ────────────────────────────────────────────────
