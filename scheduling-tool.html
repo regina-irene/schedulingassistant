@@ -952,6 +952,63 @@
   .btn-open-mail:hover { background: #0096c7; }
 
 
+
+  /* ── APPOINTMENT TYPE SELECTOR ── */
+  .appt-type-list { display: flex; flex-direction: column; gap: 0.35rem; }
+  .appt-type-opt {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 2px solid var(--rule);
+    background: white;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .appt-type-opt:hover { border-color: #00b4d8; background: #f0f9ff; }
+  .appt-type-opt.selected { border-color: #0077b6; background: #e0f7fa; }
+  .appt-type-opt .appt-name { font-size: 0.82rem; font-weight: 600; color: var(--ink); flex: 1; }
+  .appt-type-opt .appt-dur { font-size: 0.72rem; color: #0077b6; font-weight: 700; background: #caf0f8; border-radius: 10px; padding: 1px 8px; white-space: nowrap; }
+  .form-step { display: none; flex-direction: column; gap: 0.6rem; }
+  .form-step.active { display: flex; }
+  .step-indicator {
+    display: flex;
+    gap: 0.3rem;
+    margin-bottom: 0.2rem;
+  }
+  .step-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--rule);
+    transition: background 0.2s;
+  }
+  .step-dot.active { background: #0077b6; }
+  .step-dot.done { background: #00b4d8; }
+  .step-back {
+    background: none;
+    border: none;
+    color: #0077b6;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    font-family: 'DM Sans', sans-serif;
+    text-align: left;
+    margin-bottom: -0.2rem;
+  }
+  .step-back:hover { text-decoration: underline; }
+  .selected-summary {
+    background: #e0f7fa;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    color: #0077b6;
+    font-weight: 600;
+    border: 1px solid #90caf9;
+  }
+
   /* ── BRANCHING ADD TASK FORM ── */
   .task-type-choice {
     display: grid;
@@ -1240,33 +1297,76 @@
       <div class="section-label">Add Scheduling Task</div>
       <div class="add-form">
 
-        <!-- Step 1: shared fields -->
-        <input type="text" id="new-title" placeholder="Task title *" />
-        <textarea id="new-desc" placeholder="Description / notes" style="min-height:48px"></textarea>
-        <select id="new-priority">
-          <option value="medium">Priority: Medium</option>
-          <option value="high">Priority: High</option>
-          <option value="low">Priority: Low</option>
-        </select>
+        <!-- Step indicator -->
+        <div class="step-indicator">
+          <div class="step-dot active" id="sdot-0"></div>
+          <div class="step-dot" id="sdot-1"></div>
+          <div class="step-dot" id="sdot-2"></div>
+          <div class="step-dot" id="sdot-3"></div>
+        </div>
 
-        <!-- Step 2: branch question -->
-        <div class="form-divider">Do you have proposed dates?</div>
-        <div class="task-type-choice">
-          <div class="task-type-btn active" id="type-btn-find" onclick="setTaskType('find')">
-            <span class="type-icon">🔍</span>
-            <span class="type-label">No — Find Times</span>
-            <span class="type-sub">I need to find available slots</span>
+        <!-- STEP 0: Appointment Type -->
+        <div class="form-step active" id="form-step-0">
+          <div class="form-divider">What type of appointment?</div>
+          <div class="appt-type-list">
+            <div class="appt-type-opt" onclick="selectApptType('Mediation with RIE as the Mediator','6 hours',this)">
+              <span class="appt-name">Mediation with RIE as the Mediator</span>
+              <span class="appt-dur">6 hrs</span>
+            </div>
+            <div class="appt-type-opt" onclick="selectApptType('Mediation for an EFL Case','6 hours',this)">
+              <span class="appt-name">Mediation for an EFL Case</span>
+              <span class="appt-dur">6 hrs</span>
+            </div>
+            <div class="appt-type-opt" onclick="selectApptType('GAL Home Visit','2 hours',this)">
+              <span class="appt-name">GAL Home Visit</span>
+              <span class="appt-dur">2 hrs</span>
+            </div>
+            <div class="appt-type-opt" onclick="selectApptType('GAL Witness Interview','20 minutes',this)">
+              <span class="appt-name">GAL Witness Interview</span>
+              <span class="appt-dur">20 min</span>
+            </div>
+            <div class="appt-type-opt" onclick="selectApptType('GAL Party Meeting','1 hour',this)">
+              <span class="appt-name">GAL Party Meeting</span>
+              <span class="appt-dur">1 hr</span>
+            </div>
+            <div class="appt-type-opt" onclick="selectApptType('Prep Meeting with EFL Client','1 hour',this)">
+              <span class="appt-name">Prep Meeting with EFL Client</span>
+              <span class="appt-dur">1 hr</span>
+            </div>
           </div>
-          <div class="task-type-btn" id="type-btn-check" onclick="setTaskType('check')">
-            <span class="type-icon">📋</span>
-            <span class="type-label">Yes — Check Times</span>
-            <span class="type-sub">3rd party sent proposed times</span>
+          <div style="margin-top:0.5rem">
+            <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px">Custom / Additional Title <span style="color:#e63946">*</span></label>
+            <input type="text" id="new-title-custom" placeholder="e.g. Smith v. Jones, Client name..." />
+            <div style="font-size:0.71rem;color:var(--muted);margin-top:3px">Required — used to identify this specific appointment</div>
+          </div>
+          <textarea id="new-desc" placeholder="Notes / description (optional)" style="min-height:44px"></textarea>
+          <button class="btn-add" onclick="goToStep1()">Next: Proposed Dates? &rsaquo;</button>
+        </div>
+
+        <!-- STEP 1: Proposed dates branch -->
+        <div class="form-step" id="form-step-1">
+          <button class="step-back" onclick="goToStep(0)">&lsaquo; Back</button>
+          <div class="selected-summary" id="step1-summary"></div>
+          <div class="form-divider">Do you already have proposed dates?</div>
+          <div class="task-type-choice">
+            <div class="task-type-btn" id="type-btn-find" onclick="setTaskType('find')">
+              <span class="type-icon">🔍</span>
+              <span class="type-label">No — Find Times</span>
+              <span class="type-sub">Search my calendar for open slots</span>
+            </div>
+            <div class="task-type-btn" id="type-btn-check" onclick="setTaskType('check')">
+              <span class="type-icon">📋</span>
+              <span class="type-label">Yes — Check Times</span>
+              <span class="type-sub">3rd party sent proposed times</span>
+            </div>
           </div>
         </div>
 
-        <!-- Branch A: Find Times (existing flow) -->
-        <div class="form-branch active" id="branch-find">
-          <input type="text" id="new-duration" placeholder="Duration (e.g. 1 hour, 30 min)" />
+        <!-- STEP 2A: Find Times -->
+        <div class="form-step" id="form-step-2a">
+          <button class="step-back" onclick="goToStep(1)">&lsaquo; Back</button>
+          <div class="selected-summary" id="step2a-summary"></div>
+          <div class="form-divider">Search parameters</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem">
             <div>
               <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px">Date From</label>
@@ -1288,13 +1388,17 @@
             </div>
           </div>
           <div>
-            <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px">Deadline (optional)</label>
+            <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px">Must schedule by (deadline)</label>
             <input type="date" id="new-deadline" />
           </div>
+          <input type="hidden" id="new-duration" />
+          <button class="btn-add" onclick="addTask()">+ Add Task</button>
         </div>
 
-        <!-- Branch B: Check 3rd-Party Proposed Times -->
-        <div class="form-branch" id="branch-check">
+        <!-- STEP 2B: Check 3rd-Party Times -->
+        <div class="form-step" id="form-step-2b">
+          <button class="step-back" onclick="goToStep(1)">&lsaquo; Back</button>
+          <div class="selected-summary" id="step2b-summary"></div>
           <div class="form-divider">Enter proposed times</div>
           <div id="proposed-slots-container">
             <div class="proposed-slot-entry" id="pse-0">
@@ -1302,22 +1406,21 @@
                 <span style="font-size:0.72rem;font-weight:600;color:#0077b6">Option 1</span>
                 <button class="btn-remove-slot-entry" onclick="removeProposedEntry(0)" style="display:none">✕ Remove</button>
               </div>
-              <input type="text" placeholder="e.g. Monday April 6 at 2pm or Apr 6, 2:00 PM" id="pse-text-0" />
+              <input type="text" placeholder="e.g. Monday April 6 at 2pm" id="pse-text-0" />
             </div>
           </div>
           <button class="btn-add-proposed-slot" onclick="addProposedEntry()">+ Add another proposed time</button>
-          <div class="form-divider">Check my availability</div>
-          <input type="text" id="new-duration-check" placeholder="Duration (e.g. 1 hour, 30 min)" />
           <div>
             <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px">Must decide by</label>
             <input type="date" id="new-deadline-check" />
           </div>
+          <input type="hidden" id="new-duration-check" />
           <div style="font-size:0.75rem;color:var(--muted);background:#e0f7fa;border-radius:6px;padding:6px 10px;line-height:1.5">
-            💡 Times will be checked against your calendar. Available options will be presented for your approval — conflicting ones will be flagged.
+            💡 Times will be checked against your calendar and flagged as free or busy.
           </div>
+          <button class="btn-add" id="add-task-btn" onclick="addTask()">+ Add &amp; Check Availability</button>
         </div>
 
-        <button class="btn-add" id="add-task-btn" onclick="addTask()">+ Add Task</button>
       </div>
     </div>
 
@@ -1439,7 +1542,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
@@ -2189,6 +2292,85 @@ function saveTasks() { localStorage.setItem('sched_tasks', JSON.stringify(tasks)
 
 let currentTaskType = 'find';
 let proposedEntryCount = 1;
+let selectedApptTitle = '';
+let selectedApptDuration = '';
+let currentFormStep = 0;
+
+function selectApptType(title, duration, el) {
+  document.querySelectorAll('.appt-type-opt').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedApptTitle = title;
+  selectedApptDuration = duration;
+  document.getElementById('new-title-custom').value = '';
+}
+
+function clearApptTypeSelection() {
+  document.querySelectorAll('.appt-type-opt').forEach(e => e.classList.remove('selected'));
+  selectedApptTitle = '';
+  selectedApptDuration = '';
+}
+
+function updateStepDots(step) {
+  for (let i = 0; i <= 3; i++) {
+    const dot = document.getElementById('sdot-' + i);
+    if (!dot) continue;
+    dot.classList.remove('active','done');
+    if (i < step) dot.classList.add('done');
+    else if (i === step) dot.classList.add('active');
+  }
+}
+
+function goToStep(step) {
+  document.querySelectorAll('.form-step').forEach(s => s.classList.remove('active'));
+  currentFormStep = step;
+  updateStepDots(step);
+  if (step === 0) document.getElementById('form-step-0').classList.add('active');
+  else if (step === 1) document.getElementById('form-step-1').classList.add('active');
+  else if (step === 2) {
+    const id = currentTaskType === 'check' ? 'form-step-2b' : 'form-step-2a';
+    document.getElementById(id).classList.add('active');
+  }
+}
+
+function goToStep1() {
+  const custom = document.getElementById('new-title-custom').value.trim();
+  if (!custom) {
+    toast('Please enter a custom title to identify this appointment.', 'error');
+    document.getElementById('new-title-custom').focus();
+    return;
+  }
+  if (!selectedApptTitle) {
+    // No type selected — use custom as both type and title
+    selectedApptTitle = custom;
+    selectedApptDuration = '';
+  }
+  // Full display title = type name + custom identifier
+  const displayTitle = selectedApptTitle + ' — ' + custom;
+  const dur = selectedApptDuration ? ' (' + selectedApptDuration + ')' : '';
+  document.getElementById('step1-summary').textContent = '✓ ' + displayTitle + dur;
+  goToStep(1);
+}
+
+function setTaskType(type) {
+  currentTaskType = type;
+  document.getElementById('type-btn-find').classList.toggle('active', type === 'find');
+  document.getElementById('type-btn-check').classList.toggle('active', type === 'check');
+  // Show summary and advance to step 2
+  const dur = selectedApptDuration ? ' — ' + selectedApptDuration : '';
+  const summary = '✓ ' + selectedApptTitle + dur;
+  const step2a = document.getElementById('step2a-summary');
+  const step2b = document.getElementById('step2b-summary');
+  if (step2a) step2a.textContent = summary;
+  if (step2b) step2b.textContent = summary;
+  // Pre-fill duration hidden fields
+  if (selectedApptDuration) {
+    const df = document.getElementById('new-duration');
+    const dc = document.getElementById('new-duration-check');
+    if (df) df.value = selectedApptDuration;
+    if (dc) dc.value = selectedApptDuration;
+  }
+  goToStep(2);
+}
 
 function setTaskType(type) {
   currentTaskType = type;
@@ -2237,8 +2419,12 @@ function parseProposedDateTime(text) {
 }
 
 function addTask() {
-  const title = document.getElementById('new-title').value.trim();
-  if (!title) { toast('Task title is required.', 'error'); return; }
+  // Build full title: appointment type + custom identifier
+  const customTitle = document.getElementById('new-title-custom') ? document.getElementById('new-title-custom').value.trim() : '';
+  const title = selectedApptTitle
+    ? (customTitle ? selectedApptTitle + ' — ' + customTitle : selectedApptTitle)
+    : customTitle;
+  if (!title) { toast('Please complete the appointment type step first.', 'error'); return; }
 
   if (currentTaskType === 'check') {
     // ── Branch B: 3rd-party proposed times ──
@@ -2257,7 +2443,7 @@ function addTask() {
       id: Date.now(),
       title,
       desc: document.getElementById('new-desc').value.trim(),
-      priority: document.getElementById('new-priority').value,
+      priority: 'medium',
       duration,
       deadline,
       taskType: 'check', // mark as 3rd-party check type
@@ -2300,11 +2486,15 @@ function addTask() {
       + '<span style="font-size:0.72rem;font-weight:600;color:#0077b6">Option 1</span>'
       + '<button class="btn-remove-slot-entry" onclick="removeProposedEntry(0)" style="display:none">✕ Remove</button>'
       + '</div>'
-      + '<input type="text" placeholder="e.g. Monday April 6 at 2pm or Apr 6, 2:00 PM" id="pse-text-0" />'
+      + '<input type="text" placeholder="e.g. Monday April 6 at 2pm" id="pse-text-0" />'
       + '</div>';
     proposedEntryCount = 1;
-    document.getElementById('new-duration-check').value = '';
-    document.getElementById('new-deadline-check').value = '';
+    const dce = document.getElementById('new-duration-check'); if (dce) dce.value = '';
+    const dke = document.getElementById('new-deadline-check'); if (dke) dke.value = '';
+    selectedApptTitle = ''; selectedApptDuration = '';
+    document.querySelectorAll('.appt-type-opt').forEach(e => e.classList.remove('selected'));
+    if (document.getElementById('new-title-custom')) document.getElementById('new-title-custom').value = '';
+    goToStep(0);
 
   } else {
     // ── Branch A: Find Times (original flow) ──
@@ -2312,7 +2502,7 @@ function addTask() {
       id: Date.now(),
       title,
       desc: document.getElementById('new-desc').value.trim(),
-      priority: document.getElementById('new-priority').value,
+      priority: 'medium',
       duration: document.getElementById('new-duration').value.trim(),
       dateFrom: document.getElementById('new-date-from').value,
       dateTo: document.getElementById('new-date-to').value,
@@ -2328,17 +2518,19 @@ function addTask() {
     renderTasks();
     renderConfirmedPanel();
 
-    ['new-title','new-desc','new-duration','new-date-from','new-date-to','new-deadline'].forEach(id => document.getElementById(id).value = '');
+    ['new-desc','new-duration','new-date-from','new-date-to','new-deadline'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     document.getElementById('new-priority').value = 'medium';
     document.getElementById('new-pref-start').value = '09:00';
     document.getElementById('new-pref-end').value = '17:00';
+    selectedApptTitle = ''; selectedApptDuration = '';
+    document.querySelectorAll('.appt-type-opt').forEach(e => e.classList.remove('selected'));
+    if (document.getElementById('new-title-custom')) document.getElementById('new-title-custom').value = '';
+    goToStep(0);
     toast('Task added! Use ✨ Suggest Times to find availability.', 'success');
   }
 
   // Reset shared fields
-  document.getElementById('new-title').value = '';
-  document.getElementById('new-desc').value = '';
-  document.getElementById('new-priority').value = 'medium';
+  const descEl = document.getElementById('new-desc'); if (descEl) descEl.value = '';
 }
 
 function deleteTask(id) {
@@ -2362,7 +2554,7 @@ function renderTasks() {
 }
 
 function renderTaskCard(task) {
-  const prioClass = { high: 'priority-high', medium: 'priority-medium', low: 'priority-low' }[task.priority];
+  const prioClass = 'priority-medium';
   const statusTag = task.status === 'scheduled'
     ? '<span class="tag tag-status-scheduled">✓ Scheduled</span>'
     : task.status === 'conflict'
