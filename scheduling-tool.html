@@ -1549,11 +1549,11 @@
           <div class="form-divider">Enter proposed times</div>
           <div id="proposed-slots-container">
             <div class="proposed-slot-entry" id="pse-0">
-              <div style="display:flex;justify-content:space-between;align-items:center">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
                 <span style="font-size:0.72rem;font-weight:600;color:#0077b6">Option 1</span>
                 <button class="btn-remove-slot-entry" onclick="removeProposedEntry(0)" style="display:none">✕ Remove</button>
               </div>
-              <input type="text" placeholder="e.g. Monday April 6 at 2pm" id="pse-text-0" />
+              <input type="datetime-local" id="pse-text-0" style="width:100%;padding:7px 9px;border:1px solid var(--rule);border-radius:6px;font-size:0.85rem;color:var(--ink);background:white;outline:none" />
             </div>
           </div>
           <button class="btn-add-proposed-slot" onclick="addProposedEntry()">+ Add another proposed time</button>
@@ -1563,7 +1563,7 @@
           </div>
           <input type="hidden" id="new-duration-check" />
           <div style="font-size:0.75rem;color:var(--muted);background:#e0f7fa;border-radius:6px;padding:6px 10px;line-height:1.5">
-            💡 Times will be checked against your calendar and flagged as free or busy.
+            💡 Select each proposed date and time. They will be checked against your calendar and flagged as free or busy.
           </div>
           <button class="btn-add" id="add-task-btn" onclick="addTask()">+ Add &amp; Check Availability</button>
         </div>
@@ -1732,7 +1732,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
@@ -2773,13 +2773,12 @@ function addProposedEntry() {
   const div = document.createElement('div');
   div.className = 'proposed-slot-entry';
   div.id = 'pse-' + idx;
-  div.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center">'
+  div.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
     + '<span style="font-size:0.72rem;font-weight:600;color:#0077b6">Option ' + (idx+1) + '</span>'
     + '<button class="btn-remove-slot-entry" onclick="removeProposedEntry(' + idx + ')">✕ Remove</button>'
     + '</div>'
-    + '<input type="text" placeholder="e.g. Monday April 6 at 2pm" id="pse-text-' + idx + '" />';
+    + '<input type="datetime-local" id="pse-text-' + idx + '" style="width:100%;padding:7px 9px;border:1px solid var(--rule);border-radius:6px;font-size:0.85rem;color:var(--ink);background:white;outline:none" />';
   container.appendChild(div);
-  // Show remove buttons now there are multiple
   container.querySelectorAll('.btn-remove-slot-entry').forEach(b => b.style.display = 'block');
 }
 
@@ -2817,13 +2816,13 @@ function addTask() {
     const duration = document.getElementById('new-duration-check').value.trim();
     const deadline = document.getElementById('new-deadline-check').value;
 
-    // Collect all proposed slot text entries
+    // Collect all proposed slot datetime-local values
     const container = document.getElementById('proposed-slots-container');
-    const entries = container.querySelectorAll('.proposed-slot-entry input[type=text]');
+    const entries = container.querySelectorAll('.proposed-slot-entry input[type=datetime-local]');
     const rawSlots = [];
     entries.forEach(inp => { if (inp.value.trim()) rawSlots.push(inp.value.trim()); });
 
-    if (!rawSlots.length) { toast('Please enter at least one proposed time.', 'error'); return; }
+    if (!rawSlots.length) { toast('Please select at least one proposed date and time.', 'error'); return; }
 
     const task = {
       id: Date.now(),
@@ -2832,18 +2831,16 @@ function addTask() {
       priority: 'medium',
       duration,
       deadline,
-      taskType: 'check', // mark as 3rd-party check type
+      taskType: 'check',
       status: 'pending',
       slots: [],
     };
 
-    // Convert text entries to slots — try to parse, fall back to storing raw text
+    // datetime-local values are already in YYYY-MM-DDTHH:mm format — use directly
     for (const raw of rawSlots) {
-      const parsed = parseProposedDateTime(raw);
       task.slots.push({
-        datetime: parsed || '',
-        rawText: raw,
-        status: parsed ? 'unchecked' : 'unparsed',
+        datetime: raw,
+        status: 'unchecked',
         proposedBy: 'external',
         approvals: {},
       });
@@ -2862,17 +2859,17 @@ function addTask() {
     } else if (!gToken) {
       toast('Task added! Connect Google Calendar to check availability.', 'info');
     } else {
-      toast('Task added! Some times could not be parsed — please check them manually.', 'info');
+      toast('Task added! Connect Google Calendar to check availability.', 'info');
     }
 
     // Reset branch B
     document.getElementById('proposed-slots-container').innerHTML =
       '<div class="proposed-slot-entry" id="pse-0">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
       + '<span style="font-size:0.72rem;font-weight:600;color:#0077b6">Option 1</span>'
       + '<button class="btn-remove-slot-entry" onclick="removeProposedEntry(0)" style="display:none">✕ Remove</button>'
       + '</div>'
-      + '<input type="text" placeholder="e.g. Monday April 6 at 2pm" id="pse-text-0" />'
+      + '<input type="datetime-local" id="pse-text-0" style="width:100%;padding:7px 9px;border:1px solid var(--rule);border-radius:6px;font-size:0.85rem;color:var(--ink);background:white;outline:none" />'
       + '</div>';
     proposedEntryCount = 1;
     const dce = document.getElementById('new-duration-check'); if (dce) dce.value = '';
