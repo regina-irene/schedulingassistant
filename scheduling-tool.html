@@ -1090,6 +1090,113 @@
     margin-top: 0.2rem;
   }
 
+
+  /* ── NOTIFY MODAL ── */
+  .notify-modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(2,62,138,0.5);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 300;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .notify-modal-overlay.open { opacity: 1; pointer-events: all; }
+  .notify-modal {
+    background: white;
+    border-radius: 16px;
+    width: min(520px, 95vw);
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 64px rgba(0,60,130,0.25);
+    transform: scale(0.96);
+    transition: transform 0.2s;
+  }
+  .notify-modal-overlay.open .notify-modal { transform: scale(1); }
+  .notify-modal-header {
+    background: linear-gradient(135deg, #023e8a 0%, #0096c7 100%);
+    color: white;
+    padding: 1.2rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 16px 16px 0 0;
+  }
+  .notify-modal-header h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.2rem;
+    margin: 0;
+  }
+  .notify-body { padding: 1.2rem 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+  .notify-recipient-btns {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .notify-recip-btn {
+    padding: 7px 16px;
+    border-radius: 20px;
+    border: 2px solid var(--rule);
+    background: white;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--ink);
+  }
+  .notify-recip-btn:hover { border-color: #00b4d8; background: #e0f7fa; }
+  .notify-recip-btn.selected { border-color: #0077b6; background: #0077b6; color: white; }
+  .notify-email-input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    color: var(--ink);
+    outline: none;
+  }
+  .notify-email-input:focus { border-color: #00b4d8; box-shadow: 0 0 0 2px #caf0f8; }
+  .notify-tasks-list { display: flex; flex-direction: column; gap: 0.4rem; max-height: 200px; overflow-y: auto; }
+  .notify-task-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 7px 10px;
+    border-radius: 7px;
+    border: 1px solid var(--rule);
+    background: #f8fcff;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .notify-task-item:hover { border-color: #00b4d8; }
+  .notify-task-item.checked { border-color: #0077b6; background: #e0f7fa; }
+  .notify-task-check { width: 16px; height: 16px; border-radius: 4px; border: 2px solid #b3d4e8; background: white; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; }
+  .notify-task-item.checked .notify-task-check { background: #0077b6; border-color: #0077b6; color: white; }
+  .notify-preview-box {
+    background: #f0f9ff;
+    border: 1px solid #b3d4e8;
+    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    font-size: 0.83rem;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    color: var(--ink);
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  .notify-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e0f2fe;
+    display: flex;
+    gap: 0.6rem;
+    justify-content: flex-end;
+    background: #f8fcff;
+    border-radius: 0 0 16px 16px;
+  }
+
   /* ── CHECK ALL button ── */
   .toolbar {
     display: flex;
@@ -1455,6 +1562,7 @@
       <button class="btn-primary" onclick="checkAllSlots()" id="check-all-btn">
         <span>🔍</span> Check All Availability
       </button>
+      <button class="btn-secondary" onclick="openNotifyModal()">🔔 Notify</button>
       <button class="btn-secondary" onclick="exportSummary()">📋 Export Summary</button>
       <button class="btn-secondary" onclick="clearScheduled()">✓ Clear Scheduled</button>
     </div>
@@ -1529,6 +1637,48 @@
   </div>
 </div>
 
+
+<!-- Notify Modal -->
+<div class="notify-modal-overlay" id="notify-modal-overlay">
+  <div class="notify-modal">
+    <div class="notify-modal-header">
+      <h2>🔔 Notify Someone</h2>
+      <button style="background:rgba(255,255,255,0.2);border:none;color:white;width:30px;height:30px;border-radius:50%;font-size:1rem;cursor:pointer" onclick="closeNotifyModal()">✕</button>
+    </div>
+    <div class="notify-body">
+
+      <div>
+        <div class="section-label" style="margin-bottom:0.5rem">Who are you notifying?</div>
+        <div class="notify-recipient-btns">
+          <button class="notify-recip-btn" onclick="selectRecipient(this,'Kayla','')">Kayla</button>
+          <button class="notify-recip-btn" onclick="selectRecipient(this,'Krista','')">Krista</button>
+          <button class="notify-recip-btn" onclick="selectRecipient(this,'Regina','')">Regina</button>
+        </div>
+        <div style="margin-top:0.6rem">
+          <label style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px">Their email address</label>
+          <input type="email" class="notify-email-input" id="notify-email" placeholder="email@example.com" oninput="updateNotifyPreview()" />
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label" style="margin-bottom:0.5rem">Which tasks need attention? <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:0.75rem;color:var(--muted)">(select all that apply)</span></div>
+        <div class="notify-tasks-list" id="notify-tasks-list"></div>
+      </div>
+
+      <div>
+        <div class="section-label" style="margin-bottom:0.5rem">Email preview</div>
+        <div class="notify-preview-box" id="notify-preview">Select a recipient and tasks to preview the email.</div>
+      </div>
+
+    </div>
+    <div class="notify-footer">
+      <button class="btn-secondary" onclick="closeNotifyModal()">Cancel</button>
+      <button class="btn-copy-email" onclick="copyNotifyEmail()">📋 Copy</button>
+      <button class="btn-open-mail" onclick="openNotifyMailto()">✉️ Open in Mail</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div id="toast"></div>
 
@@ -1542,7 +1692,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
@@ -1810,6 +1960,142 @@ function togglePrivate(i) {
     : `"${calendars[i].name}" is now accessible to Kayla/Krista.`, 'info');
 }
 
+
+
+// ────────────────────────────────────────────────
+//  NOTIFY
+// ────────────────────────────────────────────────
+let notifyRecipientName = '';
+let notifySelectedTasks = new Set();
+
+function openNotifyModal() {
+  notifyRecipientName = '';
+  notifySelectedTasks = new Set();
+  document.getElementById('notify-email').value = '';
+  document.querySelectorAll('.notify-recip-btn').forEach(b => b.classList.remove('selected'));
+
+  // Populate task list — pending/active tasks that aren't archived
+  const list = document.getElementById('notify-tasks-list');
+  const activeTasks = tasks.filter(t => t.status !== 'archived');
+  if (!activeTasks.length) {
+    list.innerHTML = '<div style="font-size:0.82rem;color:var(--muted)">No active tasks.</div>';
+  } else {
+    list.innerHTML = activeTasks.map(t => {
+      const confirmed = t.slots.some(s => s.confirmed && !s.archived);
+      const hasPending = t.slots.some(s => !s.confirmed);
+      const hint = confirmed ? '✔ Has confirmed time' : hasPending ? '⏳ Awaiting selection' : '➕ No slots yet';
+      return '<div class="notify-task-item" id="ntask-' + t.id + '" onclick="toggleNotifyTask(' + t.id + ')">'
+        + '<div class="notify-task-check" id="ntcheck-' + t.id + '"></div>'
+        + '<div><div style="font-weight:600;font-size:0.82rem">' + esc(t.title) + '</div>'
+        + '<div style="font-size:0.72rem;color:var(--muted)">' + hint + '</div></div>'
+        + '</div>';
+    }).join('');
+  }
+
+  updateNotifyPreview();
+  document.getElementById('notify-modal-overlay').classList.add('open');
+}
+
+function closeNotifyModal() {
+  document.getElementById('notify-modal-overlay').classList.remove('open');
+}
+
+function selectRecipient(btn, name, email) {
+  notifyRecipientName = name;
+  document.querySelectorAll('.notify-recip-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  if (email) document.getElementById('notify-email').value = email;
+  updateNotifyPreview();
+}
+
+function toggleNotifyTask(taskId) {
+  if (notifySelectedTasks.has(taskId)) {
+    notifySelectedTasks.delete(taskId);
+  } else {
+    notifySelectedTasks.add(taskId);
+  }
+  const item = document.getElementById('ntask-' + taskId);
+  const check = document.getElementById('ntcheck-' + taskId);
+  if (item) item.classList.toggle('checked', notifySelectedTasks.has(taskId));
+  if (check) check.textContent = notifySelectedTasks.has(taskId) ? '✓' : '';
+  updateNotifyPreview();
+}
+
+function buildNotifyEmail() {
+  const name = notifyRecipientName || '[Recipient]';
+  const sender = role === 'owner' ? 'Regina' : 'Kayla/Krista';
+  const scheduleUrl = window.location.href;
+
+  const selectedTaskObjs = tasks.filter(t => notifySelectedTasks.has(t.id));
+
+  let subject = 'ScheduleSync — Action Needed';
+  if (selectedTaskObjs.length === 1) subject = 'ScheduleSync — ' + selectedTaskObjs[0].title + ' Needs Your Input';
+  else if (selectedTaskObjs.length > 1) subject = 'ScheduleSync — ' + selectedTaskObjs.length + ' Items Need Your Review';
+
+  let body = 'Hi ' + name + ',' + '\n\n';
+
+  if (selectedTaskObjs.length === 0) {
+    body += 'Please take a moment to review the scheduling tool \u2014 there are items that may need your attention.' + '\n\n';
+  } else {
+    body += 'Please review the following item' + (selectedTaskObjs.length > 1 ? 's' : '') + ' in ScheduleSync:' + '\n\n';
+    selectedTaskObjs.forEach(function(t) {
+      const confirmed = t.slots.some(function(s) { return s.confirmed && !s.archived; });
+      const freeSlots = t.slots.filter(function(s) { return s.status === 'free' && !s.confirmed; });
+      const pendingVote = t.slots.filter(function(s) { return !s.confirmed && s.status === 'free'; });
+
+      body += '  \u2022 ' + t.title;
+      if (t.duration) body += ' (' + t.duration + ')';
+      body += '\n';
+
+      if (confirmed) {
+        body += '    Status: Confirmed \u2014 please review and archive if done.\n';
+      } else if (freeSlots.length > 0) {
+        body += '    Status: ' + freeSlots.length + ' available time' + (freeSlots.length > 1 ? 's' : '') + ' awaiting your approval.\n';
+      } else {
+        body += '    Status: Needs scheduling \u2014 please propose or review times.\n';
+      }
+    });
+    body += '\n';
+  }
+
+  body += 'You can access ScheduleSync here:' + '\n' + scheduleUrl + '\n\n';
+  body += 'Thank you,' + '\n' + sender;
+
+  return { subject, body };
+}
+
+function updateNotifyPreview() {
+  const { subject, body } = buildNotifyEmail();
+  const preview = document.getElementById('notify-preview');
+  const email = document.getElementById('notify-email').value.trim();
+  preview.textContent = 'To: ' + (email || '[email address]') + '\nSubject: ' + subject + '\n\n' + body;
+}
+
+function copyNotifyEmail() {
+  const { subject, body } = buildNotifyEmail();
+  const email = document.getElementById('notify-email').value.trim();
+  const full = (email ? 'To: ' + email + '\n' : '') + 'Subject: ' + subject + '\n\n' + body;
+  navigator.clipboard.writeText(full).then(function() {
+    toast('Notification email copied!', 'success');
+  }).catch(function() {
+    const ta = document.createElement('textarea');
+    ta.value = full;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('Notification email copied!', 'success');
+  });
+}
+
+function openNotifyMailto() {
+  const { subject, body } = buildNotifyEmail();
+  const email = document.getElementById('notify-email').value.trim();
+  const mailto = 'mailto:' + encodeURIComponent(email)
+    + '?subject=' + encodeURIComponent(subject)
+    + '&body=' + encodeURIComponent(body);
+  window.location.href = mailto;
+}
 
 // ────────────────────────────────────────────────
 //  CALENDAR VIEW
