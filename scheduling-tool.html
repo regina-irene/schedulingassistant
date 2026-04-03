@@ -1197,6 +1197,46 @@
     border-radius: 0 0 16px 16px;
   }
 
+
+  /* ── ZOOM ── */
+  .btn-zoom {
+    background: #2D8CFF;
+    color: white;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+    font-family: 'DM Sans', sans-serif;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    text-decoration: none;
+  }
+  .btn-zoom:hover { background: #1a6fd4; }
+  .zoom-link-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 6px;
+    flex-wrap: wrap;
+  }
+  .zoom-link-input {
+    flex: 1;
+    padding: 5px 8px;
+    border: 1px solid #b3d4e8;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--ink);
+    min-width: 0;
+    outline: none;
+  }
+  .zoom-link-input:focus { border-color: #2D8CFF; box-shadow: 0 0 0 2px rgba(45,140,255,0.15); }
+
   /* ── CHECK ALL button ── */
   .toolbar {
     display: flex;
@@ -1692,7 +1732,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
@@ -2381,10 +2421,15 @@ function renderConfirmedPanel() {
         + '<div class="confirmed-datetime">📅 ' + dateStr + ' at ' + timeStr + '</div>'
         + (task.duration ? '<div class="confirmed-duration">⏱ ' + esc(task.duration) + '</div>' : '')
       + '</div>'
-      + '<div style="display:flex;gap:0.4rem">'
-      + '<button class="btn-archive-item" style="color:#0077b6;border-color:#90caf9" onclick="openEmailModal(' + task.id + ',' + si + ')" title="Generate email">✉️ Email</button>'
-      + '<button class="btn-archive-item" onclick="archiveConfirmed(' + task.id + ',' + si + ')" title="Archive this appointment">Archive</button>'
+      + '<div style="display:flex;gap:0.4rem;flex-wrap:wrap">'
+      + (slot.zoomLink
+          ? '<a class="btn-zoom" href="' + esc(slot.zoomLink) + '" target="_blank">&#128249; Join Zoom</a>'
+          : '<button class="btn-zoom" onclick="openZoomScheduler(' + task.id + ',' + si + ')">&#128249; Zoom</button>')
+      + '<button class="btn-archive-item" style="color:#0077b6;border-color:#90caf9" onclick="openEmailModal(' + task.id + ',' + si + ')">&#9993; Email</button>'
+      + '<button class="btn-archive-item" onclick="archiveConfirmed(' + task.id + ',' + si + ')">Archive</button>'
       + '</div>'
+      + (slot.zoomLink ? ''
+          : '<div class="zoom-link-row"><input class="zoom-link-input" type="url" placeholder="Paste Zoom link here after scheduling..." onchange="saveZoomLink(' + task.id + ',' + si + ',this.value)" /></div>')
       + '</div>';
   }).join('');
 }
@@ -2481,16 +2526,19 @@ function renderEmailPreview() {
   let subject, body;
   if (emailTab === 'formal') {
     subject = 'Confirmed: ' + task.title + ' \u2014 ' + dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const zLine = (slot && slot.zoomLink) ? '    Zoom:     ' + slot.zoomLink + '\n' : '';
     body = 'Hello,\n\nI am writing to confirm the following appointment:\n\n'
       + '    Event:    ' + task.title + '\n'
       + '    Date:     ' + fullDate + '\n'
       + '    Time:     ' + timeStr + dur + '\n'
+      + zLine
       + (task.desc ? '    Details:  ' + task.desc + '\n' : '')
       + '\nPlease let me know if you have any questions or need to make any changes.\n\nThank you,\nRegina';
   } else if (emailTab === 'casual') {
     subject = task.title + ' \u2014 ' + dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const zLineC = (slot && slot.zoomLink) ? '\nZoom: ' + slot.zoomLink : '';
     body = 'Hi,\n\nJust confirming our ' + task.title.toLowerCase() + ' for:\n\n'
-      + fullDate + ' at ' + timeStr + dur + '\n'
+      + fullDate + ' at ' + timeStr + dur + zLineC + '\n'
       + (task.desc ? '\n' + task.desc + '\n' : '')
       + '\nLooking forward to it! Let me know if anything changes.\n\nRegina';
   } else {
@@ -2584,6 +2632,48 @@ function openMailto() {
   const subject = encodeURIComponent(document.getElementById('email-modal-overlay').dataset.subject || '');
   const body = encodeURIComponent(document.getElementById('email-modal-overlay').dataset.body || '');
   window.location.href = 'mailto:?subject=' + subject + '&body=' + body;
+}
+
+
+// ────────────────────────────────────────────────
+//  ZOOM INTEGRATION
+// ────────────────────────────────────────────────
+function openZoomScheduler(taskId, si) {
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return;
+  const slot = task.slots[si];
+  if (!slot) return;
+
+  const dt = new Date(slot.datetime);
+  const title = encodeURIComponent(task.title);
+
+  // Parse duration into minutes
+  let durationMins = 60;
+  const durText = (task.duration || '').toLowerCase();
+  const hrMatch = durText.match(/(\d+(?:\.\d+)?)\s*h/);
+  const minMatch = durText.match(/(\d+)\s*m/);
+  if (hrMatch) durationMins = Math.round(parseFloat(hrMatch[1]) * 60);
+  else if (minMatch) durationMins = parseInt(minMatch[1]);
+
+  // Build Zoom scheduler URL with pre-filled topic, date/time, duration
+  const isoDate = dt.toISOString().slice(0, 16);
+  const zoomUrl = 'https://zoom.us/meeting/schedule'
+    + '?topic=' + title
+    + '&startTime=' + encodeURIComponent(isoDate)
+    + '&duration=' + durationMins;
+
+  window.open(zoomUrl, '_blank');
+  toast('Zoom opened! After creating the meeting, paste the join link into the field below the appointment.', 'info');
+}
+
+function saveZoomLink(taskId, si, link) {
+  if (!link || !link.trim()) return;
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return;
+  task.slots[si].zoomLink = link.trim();
+  saveTasks();
+  renderConfirmedPanel();
+  toast('Zoom link saved!', 'success');
 }
 
 // ────────────────────────────────────────────────
@@ -3053,7 +3143,12 @@ function renderSlotRow(taskId, slot, si) {
     + '</div>'
     + actionRow
     + confirmBtn
-    + (isConfirmed ? '<div class="confirmed-banner" style="width:100%;margin-top:6px">🗓 Confirmed!</div>' : '');
+    + (isConfirmed
+        ? '<div class="confirmed-banner" style="width:100%;margin-top:6px;display:flex;align-items:center;gap:0.6rem">'
+          + '🗓 Confirmed!'
+          + '<button class="btn-zoom" style="margin-left:auto;font-size:0.75rem" onclick="openZoomScheduler(' + taskId + ',' + si + ')">&#128249; Schedule Zoom</button>'
+          + '</div>'
+        : '');
 
   return '<div class="' + rowClass + '" style="flex-direction:column;align-items:flex-start;gap:0" id="slot-' + taskId + '-' + si + '">' + inner + '</div>';
 }
