@@ -1672,7 +1672,7 @@
     <div class="email-modal-footer">
       <button class="btn-secondary" onclick="closeEmailModal()">Close</button>
       <button class="btn-copy-email" onclick="copyEmailText()">📋 Copy to Clipboard</button>
-      <a class="btn-open-mail" id="email-mailto-link" href="#" onclick="openMailto()">✉️ Open in Mail</a>
+      <button class="btn-open-mail" onclick="openMailto()">✉️ Open in Front</button>
     </div>
   </div>
 </div>
@@ -1732,7 +1732,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 
-const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
+const CLIENT_ID = ''; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
 // ────────────────────────────────────────────────
@@ -2631,7 +2631,7 @@ function copyEmailText() {
 function openMailto() {
   const subject = encodeURIComponent(document.getElementById('email-modal-overlay').dataset.subject || '');
   const body = encodeURIComponent(document.getElementById('email-modal-overlay').dataset.body || '');
-  window.location.href = 'mailto:?subject=' + subject + '&body=' + body;
+  window.open('https://app.frontapp.com/compose?mailto?subject=' + subject + '&body=' + body, '_blank');
 }
 
 
