@@ -2131,7 +2131,7 @@ function copyNotifyEmail() {
 function openNotifyMailto() {
   const { subject, body } = buildNotifyEmail();
   // Open Front app team inbox with subject and body pre-filled
-  const frontUrl = 'https://app.frontapp.com/inboxes/teams/folders/'
+  const frontUrl = 'https://app.frontapp.com/compose'
     + '?subject=' + encodeURIComponent(subject)
     + '&body=' + encodeURIComponent(body);
   window.open(frontUrl, '_blank');
