@@ -1238,48 +1238,6 @@
   .zoom-link-input:focus { border-color: #2D8CFF; box-shadow: 0 0 0 2px rgba(45,140,255,0.15); }
 
 
-  /* ── DRIVE SYNC ── */
-  .sync-bar {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 0.5rem 1rem;
-    background: #e0f7fa;
-    border-bottom: 1px solid #b3d4e8;
-    font-size: 0.8rem;
-    color: #0077b6;
-    flex-wrap: wrap;
-  }
-  .sync-status { flex: 1; font-weight: 500; }
-  .btn-sync {
-    background: #0077b6;
-    color: white;
-    border: none;
-    padding: 5px 14px;
-    border-radius: 6px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.78rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.15s;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    white-space: nowrap;
-  }
-  .btn-sync:hover { background: #023e8a; }
-  .btn-sync:disabled { opacity: 0.5; cursor: default; }
-  .btn-sync.push { background: #0096c7; }
-  .btn-sync.push:hover { background: #0077b6; }
-  .sync-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: #adb5bd;
-    flex-shrink: 0;
-  }
-  .sync-dot.synced { background: #38a169; }
-  .sync-dot.pending { background: #f6ad55; }
-  .sync-dot.error { background: #e53e3e; }
 
   /* ── CHECK ALL button ── */
   .toolbar {
@@ -1643,18 +1601,6 @@
     </div>
 
 
-    <!-- Neon Sync Bar -->
-    <div class="sync-bar" id="sync-bar">
-      <div class="sync-dot" id="sync-dot"></div>
-      <span class="sync-status" id="sync-status">Not synced — click Pull to load shared data.</span>
-      <button class="btn-sync" onclick="pullFromNeon()" id="btn-pull">
-        &#8595; Pull Latest
-      </button>
-      <button class="btn-sync push" onclick="pushToNeon()" id="btn-push">
-        &#8593; Push Changes
-      </button>
-    </div>
-
     <div class="toolbar">
       <button class="btn-primary" onclick="checkAllSlots()" id="check-all-btn">
         <span>🔍</span> Check All Availability
@@ -1800,7 +1746,9 @@ window.onload = () => {
   else applyRole(role);
   renderTasks();
   renderConfirmedPanel();
-  loadGoogleScript(); // initGSI is called when GSI loads; restoreSession runs after
+  loadGoogleScript();
+  // Auto-pull from Neon on load
+  setTimeout(() => pullFromNeon(), 1000); // initGSI is called when GSI loads; restoreSession runs after
 };
 
 function restoreSession() {
@@ -2750,70 +2698,43 @@ function updateSyncUI(state, msg) {
 }
 
 async function pullFromNeon() {
-  const pull = document.getElementById('btn-pull');
-  if (pull) { pull.disabled = true; pull.textContent = '↓ Pulling...'; }
-  updateSyncUI('pending', 'Loading shared data...');
   try {
     const resp = await fetch(API_BASE + '/api/tasks');
-    if (!resp.ok) throw new Error('Server error: ' + resp.status);
+    if (!resp.ok) return;
     const data = await resp.json();
-    if (data.tasks && Array.isArray(data.tasks)) {
+    if (data.tasks && Array.isArray(data.tasks) && data.tasks.length > 0) {
       tasks = data.tasks;
       localStorage.setItem('sched_tasks', JSON.stringify(tasks));
       renderTasks();
       renderConfirmedPanel();
-      const t = data.lastUpdated ? new Date(data.lastUpdated).toLocaleTimeString() : 'now';
-      updateSyncUI('synced', '✔ Synced — pulled at ' + t);
-      toast('Latest data loaded! ↓', 'success');
     }
   } catch(e) {
-    console.error('Pull error:', e);
-    updateSyncUI('error', 'Pull failed: ' + e.message);
-    toast('Pull failed — check your connection.', 'error');
-  } finally {
-    if (pull) { pull.disabled = false; pull.textContent = '↓ Pull Latest'; }
+    console.error('Auto-pull error:', e);
   }
 }
 
 async function pushToNeon() {
-  const push = document.getElementById('btn-push');
-  if (push) { push.disabled = true; push.innerHTML = '<span class="spin" style="width:12px;height:12px;border-width:2px;display:inline-block"></span> Pushing...'; }
-  updateSyncUI('pending', 'Saving changes...');
   try {
-    const resp = await fetch(API_BASE + '/api/tasks', {
+    await fetch(API_BASE + '/api/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tasks, updatedBy: role === 'owner' ? 'Regina' : 'Kayla/Krista' })
     });
-    if (!resp.ok) throw new Error('Server error: ' + resp.status);
-    const data = await resp.json();
-    const t = new Date().toLocaleTimeString();
-    updateSyncUI('synced', '✔ Synced — pushed at ' + t);
-    toast('Changes saved to shared database! ↑', 'success');
   } catch(e) {
-    console.error('Push error:', e);
-    updateSyncUI('error', 'Push failed: ' + e.message);
-    toast('Push failed — check your connection.', 'error');
-  } finally {
-    if (push) { push.disabled = false; push.innerHTML = '&#8593; Push Changes'; }
+    console.error('Auto-push error:', e);
   }
 }
 
 let autoPushTimer = null;
 
 function saveTasks() {
-  // Always save to localStorage immediately
   localStorage.setItem('sched_tasks', JSON.stringify(tasks));
-  // Auto-push to Neon after 2 seconds of inactivity
+  // Auto-push to Neon silently after 2 seconds
   clearTimeout(autoPushTimer);
-  updateSyncUI('pending', 'Unsaved changes — syncing in 2s...');
   autoPushTimer = setTimeout(() => pushToNeon(), 2000);
 }
 
-// Pull on page load to get latest shared data
-window.addEventListener('load', () => {
-  setTimeout(() => pullFromNeon(), 1500);
-});
+
 
 // ────────────────────────────────────────────────
 //  TASKS
