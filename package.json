@@ -1,0 +1,13 @@
+{
+  "name": "schedulesync",
+  "version": "2.0.0",
+  "description": "ScheduleSync - Collaborative scheduling tool for legal professionals",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.9.0",
+    "pg": "^8.11.0"
+  }
+}
