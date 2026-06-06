@@ -3084,17 +3084,77 @@ function apptIcon(title) {
 }
 
 function renderTasks() {
+  // If a task page is open but the task no longer exists, fall back to Home.
+  if (currentView !== 'home' && !tasks.find(t => t.id === currentView)) {
+    currentView = 'home';
+  }
+
+  const homeOnly = [
+    document.getElementById('confirmed-panel'),
+    document.getElementById('main-toolbar'),
+    document.getElementById('cal-view-wrap'),
+  ];
+  const backLink = document.getElementById('back-link');
+  const pageHeader = document.getElementById('page-header');
+
+  if (currentView === 'home') {
+    homeOnly.forEach(el => { if (el) el.style.display = ''; });
+    if (backLink) backLink.style.display = 'none';
+    if (pageHeader) pageHeader.style.display = '';
+    renderHome();
+  } else {
+    homeOnly.forEach(el => { if (el) el.style.display = 'none'; });
+    if (backLink) backLink.style.display = '';
+    if (pageHeader) pageHeader.style.display = 'none';
+    renderTaskPage(tasks.find(t => t.id === currentView));
+  }
+}
+
+function renderHome() {
   const container = document.getElementById('tasks-container');
-  const empty = document.getElementById('empty-msg');
   if (!tasks.length) {
-    empty.style.display = '';
-    container.innerHTML = '';
-    container.appendChild(empty);
+    // Render the empty-state markup directly. (Do NOT rely on a cached
+    // #empty-msg node — innerHTML below removes it from the DOM.)
+    container.innerHTML = ''
+      + '<div class="empty-state" id="empty-msg">'
+      + '<div class="empty-icon">📆</div>'
+      + '<h3>No scheduling tasks yet</h3>'
+      + '<p>Add tasks in the sidebar, then propose time slots and check against your Google Calendars.</p>'
+      + '</div>';
     return;
   }
-  if (empty) empty.style.display = 'none';
+  const cards = tasks.map(t => renderTaskCardCompact(t)).join('');
+  const addCard = '<div class="task-card-compact add-card" onclick="focusAddTask()">'
+    + '<div class="tcc-add">&#x2795; Add task</div></div>';
+  container.innerHTML = '<div class="task-grid">' + cards + addCard + '</div>';
+}
 
-  container.innerHTML = tasks.map(task => renderTaskCard(task)).join('');
+function renderTaskCardCompact(task) {
+  const statusTag = task.status === 'scheduled'
+    ? '<span class="tag tag-status-scheduled">&#x2713; Scheduled</span>'
+    : task.status === 'conflict'
+    ? '<span class="tag tag-status-conflict">&#x26A0; Conflict</span>'
+    : '<span class="tag tag-status-pending">Pending</span>';
+  const total = task.slots.length;
+  const confirmed = task.slots.filter(s => s.confirmed && !s.archived).length;
+  const slotHint = total
+    ? total + ' slot' + (total !== 1 ? 's' : '') + (confirmed ? ' · ' + confirmed + ' confirmed' : '')
+    : 'No slots yet';
+  return '<div class="task-card-compact" onclick="openTask(' + task.id + ')">'
+    + '<div class="tcc-title">' + apptIcon(task.title) + ' ' + esc(task.title) + '</div>'
+    + (task.desc ? '<div class="tcc-desc">' + esc(task.desc) + '</div>' : '')
+    + '<div class="tcc-meta">'
+    + (task.duration ? '<span class="tag tag-duration">&#x23F1; ' + esc(task.duration) + '</span>' : '')
+    + (task.deadline ? '<span class="tag tag-deadline">&#x1F4C5; by ' + task.deadline + '</span>' : '')
+    + statusTag
+    + '</div>'
+    + '<div class="tcc-foot"><span class="tcc-hint">' + slotHint + '</span><span class="tcc-arrow">→</span></div>'
+    + '</div>';
+}
+
+function renderTaskPage(task) {
+  if (!task) { goHome(); return; }
+  document.getElementById('tasks-container').innerHTML = renderTaskCard(task);
 }
 
 function renderTaskCard(task) {
