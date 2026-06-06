@@ -1328,12 +1328,6 @@
     aside { border-right: none; border-bottom: 1px solid var(--rule); }
   }
 
-  /* Collapse the task overview grid to one column earlier than the app shell,
-     since two side-by-side cards get cramped before the 768px shell breakpoint. */
-  @media (max-width: 900px) {
-    .task-grid { grid-template-columns: 1fr; }
-  }
-
   /* Role switch modal */
   .modal-overlay {
     position: fixed; inset: 0;
@@ -1385,8 +1379,8 @@
 
   .task-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 0.75rem;
   }
 
   .task-card-compact {
