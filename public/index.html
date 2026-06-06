@@ -1796,6 +1796,8 @@ let pendingRole = null;
 let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
+let currentView = 'home';  // 'home' or a task id (number)
+let calCollapsed = true;   // Calendar Availability starts collapsed on Home
 
 const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
@@ -3042,6 +3044,43 @@ function deleteTask(id) {
   tasks = tasks.filter(t => t.id !== id);
   saveTasks();
   renderTasks();
+}
+
+function openTask(id) {
+  currentView = id;
+  window.scrollTo(0, 0);
+  renderTasks();
+}
+
+function goHome() {
+  currentView = 'home';
+  window.scrollTo(0, 0);
+  renderTasks();
+}
+
+function focusAddTask() {
+  const form = document.querySelector('.add-form');
+  if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const titleInput = document.getElementById('new-title-custom');
+  if (titleInput) setTimeout(() => titleInput.focus(), 300);
+}
+
+function toggleCalView() {
+  calCollapsed = !calCollapsed;
+  const body = document.getElementById('cal-grid-container');
+  const btn = document.getElementById('cal-collapse-btn');
+  if (body) body.style.display = calCollapsed ? 'none' : '';
+  if (btn) btn.textContent = calCollapsed ? '▸ Show' : '▾ Hide';
+}
+
+function apptIcon(title) {
+  const t = (title || '').toLowerCase();
+  if (t.includes('mediation')) return '⚖️';
+  if (t.includes('home visit')) return '🏠';
+  if (t.includes('witness')) return '🗣';
+  if (t.includes('party')) return '👥';
+  if (t.includes('prep')) return '📝';
+  return '📋';
 }
 
 function renderTasks() {
