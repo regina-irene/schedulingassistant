@@ -1328,6 +1328,12 @@
     aside { border-right: none; border-bottom: 1px solid var(--rule); }
   }
 
+  /* Collapse the task overview grid to one column earlier than the app shell,
+     since two side-by-side cards get cramped before the 768px shell breakpoint. */
+  @media (max-width: 900px) {
+    .task-grid { grid-template-columns: 1fr; }
+  }
+
   /* Role switch modal */
   .modal-overlay {
     position: fixed; inset: 0;
@@ -1364,6 +1370,58 @@
   .role-icon { font-size: 1.5rem; }
   .role-detail strong { display: block; font-weight: 600; }
   .role-detail small { color: var(--muted); font-size: 0.8rem; }
+
+  /* ── Page-per-task views ── */
+  .back-link {
+    display: inline-block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--accent);
+    cursor: pointer;
+    margin-bottom: 1rem;
+    user-select: none;
+  }
+  .back-link:hover { text-decoration: underline; }
+
+  .task-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .task-card-compact {
+    background: var(--card-bg);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    padding: 1rem 1.1rem;
+    cursor: pointer;
+    transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .task-card-compact:hover {
+    box-shadow: 0 6px 20px var(--shadow);
+    transform: translateY(-2px);
+    border-color: var(--accent-light);
+  }
+  .tcc-title { font-weight: 600; font-size: 0.98rem; color: var(--ink); }
+  .tcc-desc {
+    font-size: 0.8rem; color: var(--muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .tcc-meta { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .tcc-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: auto; padding-top: 0.4rem;
+  }
+  .tcc-hint { font-size: 0.75rem; color: var(--muted); }
+  .tcc-arrow { font-size: 1.1rem; color: var(--accent); }
+  .task-card-compact.add-card {
+    align-items: center; justify-content: center;
+    border-style: dashed; color: var(--accent); min-height: 96px;
+  }
+  .task-card-compact.add-card .tcc-add { font-weight: 600; }
 </style>
 </head>
 <body>
@@ -1579,10 +1637,12 @@
   <!-- Main Panel -->
   <main>
 
-    <div>
-      <div class="page-title">Scheduling <span>Tasks</span></div>
-      <div class="subtitle">Propose time slots, check availability, and manage approvals.</div>
+    <div id="page-header">
+      <div class="page-title" id="page-title">Scheduling <span>Tasks</span></div>
+      <div class="subtitle" id="page-subtitle">Pick a task to work on, or add a new one.</div>
     </div>
+
+    <div id="back-link" class="back-link" style="display:none" onclick="goHome()">← Back to all tasks</div>
 
     <!-- Confirmed Appointments Panel -->
     <div class="confirmed-panel" id="confirmed-panel">
@@ -1602,7 +1662,7 @@
     </div>
 
 
-    <div class="toolbar">
+    <div class="toolbar" id="main-toolbar">
       <button class="btn-primary" onclick="checkAllSlots()" id="check-all-btn">
         <span>🔍</span> Check All Availability
       </button>
@@ -1632,9 +1692,10 @@
             <button onclick="calShift(7)">Next &#8250;</button>
           </div>
           <button class="cal-fetch-btn" onclick="fetchAndRenderCal()">🔄 Refresh</button>
+          <button class="cal-fetch-btn" id="cal-collapse-btn" onclick="toggleCalView()">▸ Show</button>
         </div>
       </div>
-      <div id="cal-grid-container">
+      <div id="cal-grid-container" style="display:none">
         <div style="padding:1.2rem;text-align:center;color:var(--muted);font-size:0.88rem">
           Connect Google Calendar and click 🔄 Refresh to load availability.
         </div>
@@ -1735,6 +1796,8 @@ let pendingRole = null;
 let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
+let currentView = 'home';  // 'home' or a task id (number)
+let calCollapsed = true;   // Calendar Availability starts collapsed on Home
 
 const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
@@ -2207,6 +2270,9 @@ function calShift(days) {
 async function fetchAndRenderCal() {
   if (!gToken) { toast('Connect Google Calendar first.', 'error'); return; }
   if (!calStartDate || isNaN(calStartDate.getTime())) calStartDate = getWeekStart(new Date());
+
+  // Auto-expand the calendar so a refresh isn't rendered into a hidden container.
+  if (calCollapsed) toggleCalView();
 
   const container = document.getElementById('cal-grid-container');
   container.innerHTML = '<div style="padding:1.2rem;text-align:center;color:var(--muted)"><span class="spin" style="border-color:rgba(0,119,182,0.3);border-top-color:#0077b6;width:20px;height:20px;display:inline-block"></span> Loading calendar...</div>';
@@ -2908,6 +2974,7 @@ function addTask() {
     }
 
     tasks.push(task);
+    currentView = task.id;
     saveTasks();
     renderTasks();
     renderConfirmedPanel();
@@ -2958,14 +3025,15 @@ function addTask() {
       slots: [],
     };
     tasks.push(task);
+    currentView = task.id;
     saveTasks();
     renderTasks();
     renderConfirmedPanel();
 
     ['new-desc','new-duration','new-date-from','new-date-to','new-deadline'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-    document.getElementById('new-priority').value = 'medium';
-    document.getElementById('new-pref-start').value = '09:00';
-    document.getElementById('new-pref-end').value = '17:00';
+    // Note: there is no #new-priority field in the wizard; tasks default to medium above.
+    const psEl = document.getElementById('new-pref-start'); if (psEl) psEl.value = '09:00';
+    const peEl = document.getElementById('new-pref-end'); if (peEl) peEl.value = '17:00';
     selectedApptTitle = ''; selectedApptDuration = '';
     document.querySelectorAll('.appt-type-opt').forEach(e => e.classList.remove('selected'));
     if (document.getElementById('new-title-custom')) document.getElementById('new-title-custom').value = '';
@@ -2979,22 +3047,121 @@ function addTask() {
 
 function deleteTask(id) {
   tasks = tasks.filter(t => t.id !== id);
+  if (currentView === id) currentView = 'home';
   saveTasks();
+  renderConfirmedPanel();
   renderTasks();
 }
 
+function openTask(id) {
+  currentView = id;
+  window.scrollTo(0, 0);
+  renderTasks();
+}
+
+function goHome() {
+  currentView = 'home';
+  window.scrollTo(0, 0);
+  renderTasks();
+}
+
+function focusAddTask() {
+  const form = document.querySelector('.add-form');
+  if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const titleInput = document.getElementById('new-title-custom');
+  if (titleInput) setTimeout(() => titleInput.focus(), 300);
+}
+
+function toggleCalView() {
+  calCollapsed = !calCollapsed;
+  const body = document.getElementById('cal-grid-container');
+  const btn = document.getElementById('cal-collapse-btn');
+  if (body) body.style.display = calCollapsed ? 'none' : '';
+  if (btn) btn.textContent = calCollapsed ? '▸ Show' : '▾ Hide';
+}
+
+function apptIcon(title) {
+  const t = (title || '').toLowerCase();
+  if (t.includes('mediation')) return '⚖️';
+  if (t.includes('home visit')) return '🏠';
+  if (t.includes('witness')) return '🗣';
+  if (t.includes('party meeting')) return '👥';
+  if (t.includes('prep')) return '📝';
+  return '📋';
+}
+
 function renderTasks() {
+  // If a task page is open but the task no longer exists, fall back to Home.
+  if (currentView !== 'home' && !tasks.find(t => t.id === currentView)) {
+    currentView = 'home';
+  }
+
+  const homeOnly = [
+    document.getElementById('confirmed-panel'),
+    document.getElementById('main-toolbar'),
+    document.getElementById('cal-view-wrap'),
+  ];
+  const backLink = document.getElementById('back-link');
+  const pageHeader = document.getElementById('page-header');
+
+  if (currentView === 'home') {
+    homeOnly.forEach(el => { if (el) el.style.display = ''; });
+    if (backLink) backLink.style.display = 'none';
+    if (pageHeader) pageHeader.style.display = '';
+    renderHome();
+  } else {
+    homeOnly.forEach(el => { if (el) el.style.display = 'none'; });
+    if (backLink) backLink.style.display = '';
+    if (pageHeader) pageHeader.style.display = 'none';
+    renderTaskPage(tasks.find(t => t.id === currentView));
+  }
+}
+
+function renderHome() {
   const container = document.getElementById('tasks-container');
-  const empty = document.getElementById('empty-msg');
   if (!tasks.length) {
-    empty.style.display = '';
-    container.innerHTML = '';
-    container.appendChild(empty);
+    // Render the empty-state markup directly. (Do NOT rely on a cached
+    // #empty-msg node — innerHTML below removes it from the DOM.)
+    container.innerHTML = ''
+      + '<div class="empty-state" id="empty-msg">'
+      + '<div class="empty-icon">📆</div>'
+      + '<h3>No scheduling tasks yet</h3>'
+      + '<p>Add tasks in the sidebar, then propose time slots and check against your Google Calendars.</p>'
+      + '</div>';
     return;
   }
-  if (empty) empty.style.display = 'none';
+  const cards = tasks.map(t => renderTaskCardCompact(t)).join('');
+  const addCard = '<div class="task-card-compact add-card" onclick="focusAddTask()">'
+    + '<div class="tcc-add">&#x2795; Add task</div></div>';
+  container.innerHTML = '<div class="task-grid">' + cards + addCard + '</div>';
+}
 
-  container.innerHTML = tasks.map(task => renderTaskCard(task)).join('');
+function renderTaskCardCompact(task) {
+  const statusTag = task.status === 'scheduled'
+    ? '<span class="tag tag-status-scheduled">&#x2713; Scheduled</span>'
+    : task.status === 'conflict'
+    ? '<span class="tag tag-status-conflict">&#x26A0; Conflict</span>'
+    : '<span class="tag tag-status-pending">Pending</span>';
+  const total = task.slots.filter(s => !s.archived).length;
+  const confirmed = task.slots.filter(s => s.confirmed && !s.archived).length;
+  const slotHint = total
+    ? total + ' slot' + (total !== 1 ? 's' : '') + (confirmed ? ' · ' + confirmed + ' confirmed' : '')
+    : 'No slots yet';
+  return '<div class="task-card-compact" onclick="openTask(' + task.id + ')">'
+    + '<div class="tcc-title">' + apptIcon(task.title) + ' ' + esc(task.title) + '</div>'
+    + (task.desc ? '<div class="tcc-desc">' + esc(task.desc) + '</div>' : '')
+    + '<div class="tcc-meta">'
+    + (task.duration ? '<span class="tag tag-duration">&#x23F1; ' + esc(task.duration) + '</span>' : '')
+    + (task.deadline ? '<span class="tag tag-deadline">&#x1F4C5; by ' + esc(task.deadline) + '</span>' : '')
+    + statusTag
+    + '</div>'
+    + '<div class="tcc-foot"><span class="tcc-hint">' + slotHint + '</span><span class="tcc-arrow">→</span></div>'
+    + '</div>';
+}
+
+function renderTaskPage(task) {
+  if (!task) { goHome(); return; }
+  document.getElementById('tasks-container').innerHTML = renderTaskCard(task);
 }
 
 function renderTaskCard(task) {
