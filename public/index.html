@@ -2971,6 +2971,7 @@ function addTask() {
     }
 
     tasks.push(task);
+    currentView = task.id;
     saveTasks();
     renderTasks();
     renderConfirmedPanel();
@@ -3021,6 +3022,7 @@ function addTask() {
       slots: [],
     };
     tasks.push(task);
+    currentView = task.id;
     saveTasks();
     renderTasks();
     renderConfirmedPanel();
@@ -3042,7 +3044,9 @@ function addTask() {
 
 function deleteTask(id) {
   tasks = tasks.filter(t => t.id !== id);
+  if (currentView === id) currentView = 'home';
   saveTasks();
+  renderConfirmedPanel();
   renderTasks();
 }
 
