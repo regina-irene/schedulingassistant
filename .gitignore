@@ -1,6 +1,9 @@
 # Brainstorming visual companion (local only)
 .superpowers/
 
+# Playwright MCP verification artifacts (local only)
+.playwright-mcp/
+
 # Dependencies
 node_modules/
 
