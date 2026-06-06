@@ -1637,10 +1637,12 @@
   <!-- Main Panel -->
   <main>
 
-    <div>
-      <div class="page-title">Scheduling <span>Tasks</span></div>
-      <div class="subtitle">Propose time slots, check availability, and manage approvals.</div>
+    <div id="page-header">
+      <div class="page-title" id="page-title">Scheduling <span>Tasks</span></div>
+      <div class="subtitle" id="page-subtitle">Pick a task to work on, or add a new one.</div>
     </div>
+
+    <div id="back-link" class="back-link" style="display:none" onclick="goHome()">← Back to all tasks</div>
 
     <!-- Confirmed Appointments Panel -->
     <div class="confirmed-panel" id="confirmed-panel">
@@ -1660,7 +1662,7 @@
     </div>
 
 
-    <div class="toolbar">
+    <div class="toolbar" id="main-toolbar">
       <button class="btn-primary" onclick="checkAllSlots()" id="check-all-btn">
         <span>🔍</span> Check All Availability
       </button>
@@ -1690,9 +1692,10 @@
             <button onclick="calShift(7)">Next &#8250;</button>
           </div>
           <button class="cal-fetch-btn" onclick="fetchAndRenderCal()">🔄 Refresh</button>
+          <button class="cal-fetch-btn" id="cal-collapse-btn" onclick="toggleCalView()">▸ Show</button>
         </div>
       </div>
-      <div id="cal-grid-container">
+      <div id="cal-grid-container" style="display:none">
         <div style="padding:1.2rem;text-align:center;color:var(--muted);font-size:0.88rem">
           Connect Google Calendar and click 🔄 Refresh to load availability.
         </div>
