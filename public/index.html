@@ -3135,7 +3135,7 @@ function renderTaskCardCompact(task) {
     : task.status === 'conflict'
     ? '<span class="tag tag-status-conflict">&#x26A0; Conflict</span>'
     : '<span class="tag tag-status-pending">Pending</span>';
-  const total = task.slots.length;
+  const total = task.slots.filter(s => !s.archived).length;
   const confirmed = task.slots.filter(s => s.confirmed && !s.archived).length;
   const slotHint = total
     ? total + ' slot' + (total !== 1 ? 's' : '') + (confirmed ? ' · ' + confirmed + ' confirmed' : '')
@@ -3145,7 +3145,7 @@ function renderTaskCardCompact(task) {
     + (task.desc ? '<div class="tcc-desc">' + esc(task.desc) + '</div>' : '')
     + '<div class="tcc-meta">'
     + (task.duration ? '<span class="tag tag-duration">&#x23F1; ' + esc(task.duration) + '</span>' : '')
-    + (task.deadline ? '<span class="tag tag-deadline">&#x1F4C5; by ' + task.deadline + '</span>' : '')
+    + (task.deadline ? '<span class="tag tag-deadline">&#x1F4C5; by ' + esc(task.deadline) + '</span>' : '')
     + statusTag
     + '</div>'
     + '<div class="tcc-foot"><span class="tcc-hint">' + slotHint + '</span><span class="tcc-arrow">→</span></div>'
