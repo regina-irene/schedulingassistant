@@ -1364,6 +1364,59 @@
   .role-icon { font-size: 1.5rem; }
   .role-detail strong { display: block; font-weight: 600; }
   .role-detail small { color: var(--muted); font-size: 0.8rem; }
+
+  /* ── Page-per-task views ── */
+  .back-link {
+    display: inline-block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--accent);
+    cursor: pointer;
+    margin-bottom: 1rem;
+    user-select: none;
+  }
+  .back-link:hover { text-decoration: underline; }
+
+  .task-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  @media (max-width: 900px) { .task-grid { grid-template-columns: 1fr; } }
+
+  .task-card-compact {
+    background: var(--card-bg);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    padding: 1rem 1.1rem;
+    cursor: pointer;
+    transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .task-card-compact:hover {
+    box-shadow: 0 6px 20px var(--shadow);
+    transform: translateY(-2px);
+    border-color: var(--accent-light);
+  }
+  .tcc-title { font-weight: 600; font-size: 0.98rem; color: var(--ink); }
+  .tcc-desc {
+    font-size: 0.8rem; color: var(--muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .tcc-meta { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .tcc-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: auto; padding-top: 0.4rem;
+  }
+  .tcc-hint { font-size: 0.75rem; color: var(--muted); }
+  .tcc-arrow { font-size: 1.1rem; color: var(--accent); }
+  .task-card-compact.add-card {
+    align-items: center; justify-content: center;
+    border-style: dashed; color: var(--accent); min-height: 96px;
+  }
+  .task-card-compact.add-card .tcc-add { font-weight: 600; }
 </style>
 </head>
 <body>
