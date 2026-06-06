@@ -3031,9 +3031,9 @@ function addTask() {
     renderConfirmedPanel();
 
     ['new-desc','new-duration','new-date-from','new-date-to','new-deadline'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-    document.getElementById('new-priority').value = 'medium';
-    document.getElementById('new-pref-start').value = '09:00';
-    document.getElementById('new-pref-end').value = '17:00';
+    // Note: there is no #new-priority field in the wizard; tasks default to medium above.
+    const psEl = document.getElementById('new-pref-start'); if (psEl) psEl.value = '09:00';
+    const peEl = document.getElementById('new-pref-end'); if (peEl) peEl.value = '17:00';
     selectedApptTitle = ''; selectedApptDuration = '';
     document.querySelectorAll('.appt-type-opt').forEach(e => e.classList.remove('selected'));
     if (document.getElementById('new-title-custom')) document.getElementById('new-title-custom').value = '';
