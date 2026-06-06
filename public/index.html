@@ -2271,6 +2271,9 @@ async function fetchAndRenderCal() {
   if (!gToken) { toast('Connect Google Calendar first.', 'error'); return; }
   if (!calStartDate || isNaN(calStartDate.getTime())) calStartDate = getWeekStart(new Date());
 
+  // Auto-expand the calendar so a refresh isn't rendered into a hidden container.
+  if (calCollapsed) toggleCalView();
+
   const container = document.getElementById('cal-grid-container');
   container.innerHTML = '<div style="padding:1.2rem;text-align:center;color:var(--muted)"><span class="spin" style="border-color:rgba(0,119,182,0.3);border-top-color:#0077b6;width:20px;height:20px;display:inline-block"></span> Loading calendar...</div>';
 
