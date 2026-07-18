@@ -1416,6 +1416,50 @@
     border-style: dashed; color: var(--accent); min-height: 96px;
   }
   .task-card-compact.add-card .tcc-add { font-weight: 600; }
+
+  /* ── BULK DELETE ── */
+  .bulk-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.55rem 0.85rem;
+    margin-bottom: 0.85rem;
+    background: var(--highlight);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    flex-wrap: wrap;
+  }
+  .bulk-selectall {
+    display: flex; align-items: center; gap: 0.4rem;
+    font-size: 0.82rem; color: var(--muted);
+    cursor: pointer; user-select: none;
+  }
+  .bulk-selectall input { cursor: pointer; }
+  .bulk-count { font-size: 0.8rem; color: var(--accent); font-weight: 600; }
+  .bulk-actions { margin-left: auto; display: flex; gap: 0.5rem; }
+  .btn-bulk {
+    background: none;
+    border: 1px solid var(--rule);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-bulk:hover { border-color: #e63946; color: #e63946; }
+  .btn-bulk:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-bulk:disabled:hover { border-color: var(--rule); color: var(--muted); }
+  .task-card-compact { position: relative; }
+  .tcc-select {
+    position: absolute;
+    top: 0.6rem; right: 0.6rem;
+    width: 18px; height: 18px;
+    cursor: pointer;
+    accent-color: var(--accent);
+    z-index: 2;
+  }
 </style>
 </head>
 <body>
@@ -1791,6 +1835,7 @@ let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
 let currentView = 'home';  // 'home' or a task id (number)
+let selectedTaskIds = new Set(); // ids of tasks checked for bulk deletion (home view)
 let calCollapsed = true;   // Calendar Availability starts collapsed on Home
 
 const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
@@ -3113,6 +3158,11 @@ function renderTasks() {
 
 function renderHome() {
   const container = document.getElementById('tasks-container');
+
+  // Drop any selected ids for tasks that no longer exist.
+  const liveIds = new Set(tasks.map(t => t.id));
+  for (const id of [...selectedTaskIds]) if (!liveIds.has(id)) selectedTaskIds.delete(id);
+
   if (!tasks.length) {
     // Render the empty-state markup directly. (Do NOT rely on a cached
     // #empty-msg node — innerHTML below removes it from the DOM.)
@@ -3127,7 +3177,62 @@ function renderHome() {
   const cards = tasks.map(t => renderTaskCardCompact(t)).join('');
   const addCard = '<div class="task-card-compact add-card" onclick="focusAddTask()">'
     + '<div class="tcc-add">&#x2795; Add task</div></div>';
-  container.innerHTML = '<div class="task-grid">' + cards + addCard + '</div>';
+  container.innerHTML = renderBulkBar() + '<div class="task-grid">' + cards + addCard + '</div>';
+}
+
+// Build the bulk action bar reflecting the current selection.
+function renderBulkBar() {
+  const count = selectedTaskIds.size;
+  const allChecked = tasks.length > 0 && count === tasks.length;
+  return '<div class="bulk-bar">'
+    + '<label class="bulk-selectall">'
+    + '<input type="checkbox" ' + (allChecked ? 'checked' : '') + ' onchange="toggleSelectAll(this.checked)" /> Select all'
+    + '</label>'
+    + '<span class="bulk-count">' + (count ? count + ' selected' : '') + '</span>'
+    + '<div class="bulk-actions">'
+    + '<button class="btn-bulk" ' + (count ? '' : 'disabled') + ' onclick="deleteSelectedTasks()">🗑 Delete Selected'
+    + (count ? ' (' + count + ')' : '') + '</button>'
+    + '<button class="btn-bulk" onclick="clearAllTasks()">🧹 Clear All</button>'
+    + '</div>'
+    + '</div>';
+}
+
+function toggleTaskSelected(id, checked) {
+  if (checked) selectedTaskIds.add(id);
+  else selectedTaskIds.delete(id);
+  renderHome(); // refresh the bar count + select-all state
+}
+
+function toggleSelectAll(checked) {
+  selectedTaskIds = checked ? new Set(tasks.map(t => t.id)) : new Set();
+  renderHome();
+}
+
+function deleteSelectedTasks() {
+  const count = selectedTaskIds.size;
+  if (!count) return;
+  if (!confirm('Delete ' + count + ' selected task' + (count === 1 ? '' : 's')
+    + '? This removes ' + (count === 1 ? 'it' : 'them') + ' for everyone and can\'t be undone.')) return;
+  tasks = tasks.filter(t => !selectedTaskIds.has(t.id));
+  selectedTaskIds = new Set();
+  saveTasks();
+  renderConfirmedPanel();
+  renderTasks();
+  toast('Deleted ' + count + ' task' + (count === 1 ? '' : 's') + '.', 'success');
+}
+
+function clearAllTasks() {
+  const count = tasks.length;
+  if (!count) return;
+  if (!confirm('Clear ALL ' + count + ' task' + (count === 1 ? '' : 's')
+    + '? This removes everything for the whole team and can\'t be undone.')) return;
+  tasks = [];
+  selectedTaskIds = new Set();
+  currentView = 'home';
+  saveTasks();
+  renderConfirmedPanel();
+  renderTasks();
+  toast('Cleared all tasks.', 'success');
 }
 
 function renderTaskCardCompact(task) {
@@ -3142,6 +3247,9 @@ function renderTaskCardCompact(task) {
     ? total + ' slot' + (total !== 1 ? 's' : '') + (confirmed ? ' · ' + confirmed + ' confirmed' : '')
     : 'No slots yet';
   return '<div class="task-card-compact" onclick="openTask(' + task.id + ')">'
+    + '<input type="checkbox" class="tcc-select" title="Select for bulk delete" '
+    + (selectedTaskIds.has(task.id) ? 'checked ' : '')
+    + 'onclick="event.stopPropagation()" onchange="toggleTaskSelected(' + task.id + ', this.checked)" />'
     + '<div class="tcc-title">' + apptIcon(task.title) + ' ' + esc(task.title) + '</div>'
     + (task.desc ? '<div class="tcc-desc">' + esc(task.desc) + '</div>' : '')
     + '<div class="tcc-meta">'
