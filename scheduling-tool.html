@@ -378,6 +378,40 @@
   }
   .btn-icon:hover { border-color: var(--accent); color: var(--accent); }
   .btn-icon.delete:hover { border-color: #e63946; color: #e63946; }
+  .btn-icon:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-icon:disabled:hover { border-color: var(--rule); color: var(--muted); }
+
+  .bulk-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.55rem 0.85rem;
+    margin-bottom: 0.85rem;
+    background: #f0f9ff;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+  }
+  .bulk-selectall {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    color: var(--muted);
+    cursor: pointer;
+    user-select: none;
+  }
+  .bulk-selectall input { cursor: pointer; }
+  .bulk-count { font-size: 0.8rem; color: var(--accent); font-weight: 600; }
+  .bulk-actions { margin-left: auto; display: flex; gap: 0.5rem; }
+
+  .task-select {
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    cursor: pointer;
+    accent-color: var(--accent);
+  }
 
 
 
@@ -1694,6 +1728,15 @@
       </div>
     </div>
 
+    <div class="bulk-bar" id="bulk-bar" style="display:none">
+      <label class="bulk-selectall"><input type="checkbox" id="bulk-selectall" onchange="toggleSelectAll(this.checked)" /> Select all</label>
+      <span class="bulk-count" id="bulk-count"></span>
+      <div class="bulk-actions">
+        <button class="btn-icon delete" id="bulk-delete-btn" onclick="deleteSelectedTasks()" disabled>🗑 Delete Selected</button>
+        <button class="btn-icon delete" onclick="clearAllTasks()">🧹 Clear All</button>
+      </div>
+    </div>
+
     <div id="tasks-container">
       <!-- tasks rendered here -->
       <div class="empty-state" id="empty-msg">
@@ -1788,6 +1831,7 @@ let pendingRole = null;
 let gToken = null;
 let calendars = [];    // {id, name, color, selected, isRiePrivate}
 let tasks = JSON.parse(localStorage.getItem('sched_tasks') || '[]');
+let selectedTaskIds = new Set(); // ids of tasks checked for bulk deletion
 
 const CLIENT_ID = '1036712991590-bh9k9o44fqglt6ktv1eagn1iimvngc28.apps.googleusercontent.com'; // << PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/drive.appdata';
@@ -3135,15 +3179,80 @@ function deleteTask(id) {
 function renderTasks() {
   const container = document.getElementById('tasks-container');
   const empty = document.getElementById('empty-msg');
+
+  // Drop any selected ids for tasks that no longer exist
+  const liveIds = new Set(tasks.map(t => t.id));
+  for (const id of [...selectedTaskIds]) if (!liveIds.has(id)) selectedTaskIds.delete(id);
+
   if (!tasks.length) {
-    empty.style.display = '';
-    container.innerHTML = '';
-    container.appendChild(empty);
+    // Rebuild the empty state fresh — the original #empty-msg node gets
+    // destroyed once cards are rendered via innerHTML, so don't rely on it.
+    container.innerHTML = `
+      <div class="empty-state" id="empty-msg">
+        <div class="empty-icon">📆</div>
+        <h3>No scheduling tasks yet</h3>
+        <p>Add tasks in the sidebar, then propose time slots and check against your Google Calendars.</p>
+      </div>`;
+    updateBulkBar();
     return;
   }
   if (empty) empty.style.display = 'none';
 
   container.innerHTML = tasks.map(task => renderTaskCard(task)).join('');
+  updateBulkBar();
+}
+
+// Reflect the current selection in the bulk action bar
+function updateBulkBar() {
+  const bar = document.getElementById('bulk-bar');
+  if (!bar) return;
+  bar.style.display = tasks.length ? 'flex' : 'none';
+
+  const count = selectedTaskIds.size;
+  const countEl = document.getElementById('bulk-count');
+  if (countEl) countEl.textContent = count ? `${count} selected` : '';
+
+  const delBtn = document.getElementById('bulk-delete-btn');
+  if (delBtn) {
+    delBtn.disabled = count === 0;
+    delBtn.textContent = count ? `🗑 Delete Selected (${count})` : '🗑 Delete Selected';
+  }
+
+  const selectAll = document.getElementById('bulk-selectall');
+  if (selectAll) selectAll.checked = tasks.length > 0 && count === tasks.length;
+}
+
+function toggleTaskSelected(id, checked) {
+  if (checked) selectedTaskIds.add(id);
+  else selectedTaskIds.delete(id);
+  updateBulkBar();
+}
+
+function toggleSelectAll(checked) {
+  selectedTaskIds = checked ? new Set(tasks.map(t => t.id)) : new Set();
+  renderTasks();
+}
+
+function deleteSelectedTasks() {
+  const count = selectedTaskIds.size;
+  if (!count) return;
+  if (!confirm(`Delete ${count} selected task${count === 1 ? '' : 's'}? This removes ${count === 1 ? 'it' : 'them'} for everyone and can't be undone.`)) return;
+  tasks = tasks.filter(t => !selectedTaskIds.has(t.id));
+  selectedTaskIds = new Set();
+  saveTasks();
+  renderTasks();
+  toast(`Deleted ${count} task${count === 1 ? '' : 's'}.`, 'success');
+}
+
+function clearAllTasks() {
+  const count = tasks.length;
+  if (!count) return;
+  if (!confirm(`Clear ALL ${count} task${count === 1 ? '' : 's'}? This removes everything for the whole team and can't be undone.`)) return;
+  tasks = [];
+  selectedTaskIds = new Set();
+  saveTasks();
+  renderTasks();
+  toast('Cleared all tasks.', 'success');
 }
 
 function renderTaskCard(task) {
@@ -3159,6 +3268,9 @@ function renderTaskCard(task) {
   return `
     <div class="task-card" id="task-${task.id}">
       <div class="task-header">
+        <input type="checkbox" class="task-select" title="Select for bulk delete"
+          onchange="toggleTaskSelected(${task.id}, this.checked)"
+          ${selectedTaskIds.has(task.id) ? 'checked' : ''} />
         <div class="task-priority ${prioClass}"></div>
         <div class="task-info">
           <div class="task-title">${esc(task.title)}</div>
