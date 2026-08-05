@@ -654,6 +654,45 @@
   .cal-event.proposed { background: #bfefff; color: #0077b6; border-left: 3px solid #00b4d8; }
   .cal-event.proposed-free { background: #c6f6d5; color: #276749; border-left: 3px solid #38a169; }
   .cal-event.confirmed { background: #bee3f8; color: #2a4365; border-left: 3px solid #3182ce; }
+
+  /* Suggested-time spotlight: when a task is open, its proposed slots are
+     pushed forward and every other task's slots fade back. */
+  .cal-event.slot-dim { opacity: 0.25; filter: saturate(0.45); }
+  .cal-event.slot-focus {
+    z-index: 6;
+    font-weight: 700;
+    box-shadow: 0 0 0 2px #0077b6, 0 2px 8px rgba(0,119,182,0.35);
+  }
+  .cal-event.slot-conflict { background: #fff5f5; color: #9b2c2c; border-left: 3px solid #e53e3e; }
+  .cal-event.slot-focus.slot-conflict {
+    box-shadow: 0 0 0 2px #e53e3e, 0 2px 8px rgba(229,62,62,0.35);
+  }
+  .cal-slot-who {
+    display: inline-block;
+    font-size: 0.56rem;
+    font-weight: 700;
+    line-height: 1.5;
+    padding: 0 3px;
+    border-radius: 3px;
+    margin-right: 3px;
+    vertical-align: middle;
+  }
+  .cal-slot-who.who-regina { background: #0077b6; color: #fff; }
+  .cal-slot-who.who-assistant { background: #023e8a; color: #fff; }
+  .cal-focus-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    background: #e0f7fa;
+    border-left: 4px solid #00b4d8;
+    border-radius: 6px;
+    padding: 7px 11px;
+    margin-bottom: 0.6rem;
+    font-size: 0.82rem;
+    color: #023e8a;
+  }
+  .cal-focus-banner .cfb-warn { color: #9b2c2c; font-weight: 700; }
   .cal-now-line {
     position: absolute;
     left: 0; right: 0;
@@ -1723,6 +1762,8 @@
             <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#00b4d8"></div>Proposed</div>
             <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#38a169"></div>Free slot</div>
             <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#3182ce"></div>Confirmed</div>
+            <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#e53e3e;box-shadow:0 0 0 2px rgba(229,62,62,0.35)"></div>Conflict</div>
+            <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#0077b6;box-shadow:0 0 0 2px rgba(0,119,182,0.35)"></div>This task</div>
           </div>
           <div class="cal-nav">
             <button onclick="calShift(-7)">&#8249; Prev</button>
@@ -2287,6 +2328,7 @@ async function fetchEvents(calId, timeMin, timeMax) {
   }));
 }
 let calBusyData = {};     // date string -> [{start, end, title, type}]
+let calFocusTaskId = null; // task id whose suggested times are spotlighted, or null
 const HOUR_HEIGHT = 28;   // px per hour slot
 const CAL_START_HOUR = 7;
 const CAL_END_HOUR = 21;
@@ -2306,8 +2348,8 @@ function calShift(days) {
   renderCalView();
 }
 
-async function fetchAndRenderCal() {
-  if (!gToken) { toast('Connect Google Calendar first.', 'error'); return; }
+async function fetchAndRenderCal(quiet) {
+  if (!gToken) { if (!quiet) toast('Connect Google Calendar first.', 'error'); return; }
   if (!calStartDate || isNaN(calStartDate.getTime())) calStartDate = getWeekStart(new Date());
 
   // Auto-expand the calendar so a refresh isn't rendered into a hidden container.
@@ -2366,7 +2408,7 @@ async function fetchAndRenderCal() {
       }
     }
     renderCalView();
-    toast('Calendar loaded — ignored entries starting with "Krista Out", "Kayla Working", or "DEADLINE".', 'info');
+    if (!quiet) toast('Calendar loaded — ignored entries starting with "Krista Out", "Kayla Working", or "DEADLINE".', 'info');
   } catch(e) {
     container.innerHTML = '<div style="padding:1.2rem;text-align:center;color:#e53e3e">Error loading calendar: ' + e.message + '</div>';
   }
@@ -2403,13 +2445,40 @@ function renderCalView() {
       const durationMs = parseDuration(task.duration);
       const end = new Date(start.getTime() + durationMs);
       const dateKey = start.toISOString().slice(0,10);
-      proposedSlots.push({ start, end, title: task.title, dateKey, status: slot.status, confirmed: slot.confirmed });
+      // A slot conflicts if it overlaps anything already on the calendar
+      // that day (busy event or private block).
+      const conflict = (calBusyData[dateKey] || []).some(b => start < b.end && end > b.start);
+      proposedSlots.push({
+        start, end, title: task.title, dateKey,
+        status: slot.status, confirmed: slot.confirmed,
+        taskId: task.id, proposedBy: slot.proposedBy || 'regina', conflict
+      });
     }
   }
 
   const totalHours = CAL_END_HOUR - CAL_START_HOUR;
 
-  let html = '<div class="cal-scroll"><div class="cal-grid" style="min-width:0">';
+  // Banner naming the task being spotlighted, plus a conflict count so a
+  // clash is obvious without hunting for the red block.
+  let focusBanner = '';
+  if (calFocusTaskId !== null) {
+    const focusTask = tasks.find(t => t.id === calFocusTaskId);
+    if (focusTask) {
+      const mine = proposedSlots.filter(ps => ps.taskId === calFocusTaskId);
+      const weekEnd = new Date(days[6]); weekEnd.setHours(23, 59, 59, 999);
+      const inWeek = mine.filter(ps => ps.start >= days[0] && ps.start <= weekEnd);
+      const clashes = inWeek.filter(ps => ps.conflict && !ps.confirmed).length;
+      focusBanner = '<div class="cal-focus-banner">'
+        + '<span>\uD83D\uDCCD Suggested times for <strong>' + esc(focusTask.title) + '</strong> \u2014 '
+        + inWeek.length + ' of ' + mine.length + ' shown this week.</span>'
+        + (clashes
+            ? '<span class="cfb-warn">\u26A0 ' + clashes + ' conflict' + (clashes > 1 ? 's' : '') + ' with your calendar</span>'
+            : '')
+        + '</div>';
+    }
+  }
+
+  let html = focusBanner + '<div class="cal-scroll"><div class="cal-grid" style="min-width:0">';
 
   // Header row: empty time col + day headers
   html += '<div class="cal-day-header" style="background:#f8fcff;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)"></div>';
@@ -2455,8 +2524,20 @@ function renderCalView() {
         if (Math.floor(psStartH) === h) {
           const top    = (psStartH - h) * HOUR_HEIGHT;
           const height = Math.min((psEndH - psStartH) * HOUR_HEIGHT, (CAL_END_HOUR - psStartH) * HOUR_HEIGHT);
-          const evClass = ps.confirmed ? 'confirmed' : ps.status === 'free' ? 'proposed-free' : 'proposed';
-          html += '<div class="cal-event ' + evClass + '" style="top:' + top + 'px;height:' + Math.max(height,12) + 'px;left:30%;right:2px" title="' + esc(ps.title) + '">' + esc(ps.title) + '</div>';
+          let evClass = ps.confirmed ? 'confirmed' : ps.status === 'free' ? 'proposed-free' : 'proposed';
+          const isFocus = calFocusTaskId !== null && ps.taskId === calFocusTaskId;
+          if (calFocusTaskId !== null) evClass += isFocus ? ' slot-focus' : ' slot-dim';
+          const flagged = ps.conflict && !ps.confirmed;
+          if (flagged) evClass += ' slot-conflict';
+          const byAssistant = ps.proposedBy === 'assistant';
+          const whoClass = byAssistant ? 'who-assistant' : 'who-regina';
+          const whoLabel = byAssistant ? 'K/K' : 'RIE';
+          const tip = (byAssistant ? 'Suggested by Kayla/Krista' : 'Suggested by Regina')
+            + ' \u2014 ' + ps.title
+            + (flagged ? ' \u2014 CONFLICTS with an existing calendar entry' : '');
+          html += '<div class="cal-event ' + evClass + '" style="top:' + top + 'px;height:' + Math.max(height,12) + 'px;left:30%;right:2px" title="' + esc(tip) + '">'
+            + '<span class="cal-slot-who ' + whoClass + '">' + whoLabel + '</span>'
+            + (flagged ? '\u26A0 ' : '') + esc(ps.title) + '</div>';
         }
       }
 
@@ -3096,6 +3177,34 @@ function openTask(id) {
   currentView = id;
   window.scrollTo(0, 0);
   renderTasks();
+  focusCalendarOnTask(id);
+}
+
+// Spotlight one task's suggested times on the availability calendar: jump to
+// the week holding the earliest suggestion, open the calendar if it is
+// collapsed, and repaint so that task's blocks stand out.
+function focusCalendarOnTask(id) {
+  calFocusTaskId = id;
+  const task = tasks.find(t => t.id === id);
+  if (!task) return;
+
+  let earliest = null;
+  for (const slot of (task.slots || [])) {
+    if (!slot.datetime) continue;
+    const d = new Date(slot.datetime);
+    if (isNaN(d.getTime())) continue;
+    if (!earliest || d < earliest) earliest = d;
+  }
+
+  if (earliest) calStartDate = getWeekStart(earliest);
+  else if (!calStartDate) calStartDate = getWeekStart(new Date());
+
+  if (calCollapsed) toggleCalView();
+
+  // With a token, pull busy data for the week we just jumped to so conflict
+  // flags are accurate. Without one, repaint using whatever we already hold.
+  if (earliest && gToken) fetchAndRenderCal(true);
+  else renderCalView();
 }
 
 function goHome() {
@@ -3135,11 +3244,14 @@ function renderTasks() {
     currentView = 'home';
   }
 
+  // The availability calendar stays visible on task pages so a suggested
+  // time can be seen in context the moment a task is opened.
   const homeOnly = [
     document.getElementById('confirmed-panel'),
     document.getElementById('main-toolbar'),
-    document.getElementById('cal-view-wrap'),
   ];
+  const calWrap = document.getElementById('cal-view-wrap');
+  if (calWrap) calWrap.style.display = '';
   const backLink = document.getElementById('back-link');
   const pageHeader = document.getElementById('page-header');
 
@@ -3147,12 +3259,21 @@ function renderTasks() {
     homeOnly.forEach(el => { if (el) el.style.display = ''; });
     if (backLink) backLink.style.display = 'none';
     if (pageHeader) pageHeader.style.display = '';
+    // Back on the overview: drop the spotlight so every task reads equally.
+    if (calFocusTaskId !== null) {
+      calFocusTaskId = null;
+      if (!calCollapsed) renderCalView();
+    }
     renderHome();
   } else {
     homeOnly.forEach(el => { if (el) el.style.display = 'none'; });
     if (backLink) backLink.style.display = '';
     if (pageHeader) pageHeader.style.display = 'none';
     renderTaskPage(tasks.find(t => t.id === currentView));
+    // Keep the spotlight on the open task as its slots are added, checked,
+    // removed, or confirmed.
+    calFocusTaskId = currentView;
+    if (!calCollapsed) renderCalView();
   }
 }
 
